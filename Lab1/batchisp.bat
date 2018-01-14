@@ -1,0 +1,1 @@
+batchisp -device AT32UC3A0512 -hardware usb -operation onfail abort memory FLASH erase F loadbuffer "%~dp0/Lab1/Debug/lab1.hex" program verify start reset 0 
