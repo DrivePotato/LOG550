@@ -17,7 +17,6 @@
 
 
 volatile U32 char_recu; 
-U32 value_pot = 0;
 int sendPotData = 0;
 volatile avr32_adc_t *adc = &AVR32_ADC; // ADC IP registers address
 unsigned short adc_channel_pot = 1;
@@ -85,33 +84,16 @@ void printLCDstring(char * data, int x, int y){
 __attribute__((__interrupt__))
 static void usart_int_handler(void)
 {
-	//      bit TXRDY : Ce bit se leve lorsqu'un transmission (vers le PC se termine,
-	//                  et demeure lever tant que le transmetteur est disponible.
-	//                  Si on lance une trasmission, celui-ci descend le temps de transmettre.
-	//                  Attention, lorsque le transmetteur ne transmet pas, ce bit est toujours a 1,
-	//                  donc il va toujours relancer l'interruption si vous oubliez le bit TXRDY du IER.
-	
-	
 	// Si cette interruption est lancee par une reception (bit RXRDY=1)
 	if (AVR32_USART1.csr & (AVR32_USART_CSR_RXRDY_MASK))
 	{
 		//Lire le char recu dans registre RHR, et le stocker dans un 32bit
 		char_recu = (AVR32_USART1.rhr & AVR32_USART_RHR_RXCHR_MASK);
-		//Eliminer la source de l'IRQ, bit RXRDY (automatiquement mis a zero a la lecture de RHR)
 	}
-	else{
+	else if(AVR32_USART1.csr & (AVR32_USART_CSR_TXRDY_MASK)){
 		// get value for the potentiometer adc channel
 		// Retransmettre un caractere vers le PC
-		printLCDstring("Pot:", 1, 3);
-		printLCD(value_pot, 5, 3);
-		
-		adc->cr = AVR32_ADC_START_MASK;
-		AVR32_USART1.thr = value_pot & ~0x01 ;
-		//AVR32_USART1.ier = AVR32_USART_IER_TXRDY_MASK;
-		//AVR32_USART1.thr = AVR32_ADC.cdr1 | 0x01;
-		//AVR32_USART1.idr = AVR32_USART_IDR_TXRDY_MASK;
-
-		sendPotData = TRUE;		
+		AVR32_USART1.idr = AVR32_USART_IDR_TXRDY_MASK;
 	}
 }
 
@@ -133,13 +115,6 @@ void init_usart1(){
 
 	// Activer la source d'interrution du UART en reception (RXRDY)
 	AVR32_USART1.ier = AVR32_USART_IER_RXRDY_MASK;
-}
-
-// code sur internet
-__attribute__((__interrupt__))
-static void adc_int_handler(void)
-{
-	printLCDstring("ADC INT", 1, 3);
 }
 
 void init_pot(){
@@ -204,19 +179,12 @@ int main(void)
 	{
 		printLCD(char_recu, 7, 2);
 		if(char_recu == 's'){
-			// Get value from adc
-			//char value = (adc_get_value(adc, adc_channel_pot) << 7) | 0x01;
-			//printLCDstring(adc_get_value(adc, adc_channel_pot), 1, 3);
-			// send light value
+			adc_start(adc);
+			// Get value for the potentiometer adc channel
+			AVR32_USART1.thr = ((adc_get_value(adc, adc_channel_pot) >> 2) & 0b11111110);//& AVR32_USART_THR_TXCHR_MASK;
 		}
 		else if(char_recu == 'x'){
 			// stop
 		}
-		
-		// launch conversion on all enabled channels
-		adc_start(adc);
-		// get value for the potentiometer adc channel
-		printLCD(adc_get_value(adc, adc_channel_pot), 1, 3);
-		// display value to user
 	}
 }

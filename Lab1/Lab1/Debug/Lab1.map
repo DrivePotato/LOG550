@@ -745,6 +745,8 @@ Discarded input sections
  .text          0x00000000        0x0 src/main.o
  .data          0x00000000        0x0 src/main.o
  .bss           0x00000000        0x0 src/main.o
+ .bss.sendPotData
+                0x00000000        0x4 src/main.o
  .text          0x00000000      0x148 d:/program file/atmel/7.0/toolchain/avr32/avr32-gnu-toolchain/bin/../lib/gcc/avr32/4.4.7/../../../../avr32/lib/ucr2\libc.a(lib_a-memcpy.o)
  .data          0x00000000        0x0 d:/program file/atmel/7.0/toolchain/avr32/avr32-gnu-toolchain/bin/../lib/gcc/avr32/4.4.7/../../../../avr32/lib/ucr2\libc.a(lib_a-memcpy.o)
  .bss           0x00000000        0x0 d:/program file/atmel/7.0/toolchain/avr32/avr32-gnu-toolchain/bin/../lib/gcc/avr32/4.4.7/../../../../avr32/lib/ucr2\libc.a(lib_a-memcpy.o)
@@ -1725,7 +1727,7 @@ LOAD d:/program file/atmel/7.0/toolchain/avr32/avr32-gnu-toolchain/bin/../lib/gc
 .plt
  *(.plt)
 
-.text           0x80002008      0xdfc
+.text           0x80002008      0xdc8
  *(.text .stub .text.* .gnu.linkonce.t.*)
  .text.dip204_select
                 0x80002008       0x14 src/ASF/avr32/components/display/dip204/dip204.o
@@ -1866,61 +1868,61 @@ LOAD d:/program file/atmel/7.0/toolchain/avr32/avr32-gnu-toolchain/bin/../lib/gc
  .text._stext   0x80002b04       0x3c src/ASF/avr32/utils/startup/startup_uc3.o
                                  0x50 (size before relaxing)
                 0x80002b04                _stext
- .text.init_pot
-                0x80002b40       0x60 src/main.o
-                0x80002b40                init_pot
- .text.init_usart1
-                0x80002ba0       0x44 src/main.o
-                0x80002ba0                init_usart1
- .text.printLCDstring
-                0x80002be4       0x30 src/main.o
-                0x80002be4                printLCDstring
- .text.printLCD
-                0x80002c14       0x34 src/main.o
-                0x80002c14                printLCD
  .text.usart_int_handler
-                0x80002c48       0x70 src/main.o
+                0x80002b40       0x38 src/main.o
+ .text.init_pot
+                0x80002b78       0x60 src/main.o
+                0x80002b78                init_pot
+ .text.init_usart1
+                0x80002bd8       0x44 src/main.o
+                0x80002bd8                init_usart1
+ .text.printLCDstring
+                0x80002c1c       0x30 src/main.o
+                0x80002c1c                printLCDstring
+ .text.printLCD
+                0x80002c4c       0x34 src/main.o
+                0x80002c4c                printLCD
  .text.init_lcd
-                0x80002cb8       0x84 src/main.o
-                0x80002cb8                init_lcd
+                0x80002c80       0x84 src/main.o
+                0x80002c80                init_lcd
  .text.initialization
-                0x80002d3c       0x48 src/main.o
-                0x80002d3c                initialization
- .text.main     0x80002d84       0x80 src/main.o
-                0x80002d84                main
+                0x80002d04       0x48 src/main.o
+                0x80002d04                initialization
+ .text.main     0x80002d4c       0x84 src/main.o
+                0x80002d4c                main
  *(.text.*personality*)
  *(.gnu.warning)
 
-.exception      0x80003000      0x200
- .exception     0x80003000      0x200 src/ASF/avr32/drivers/intc/exception.o
-                0x80003000                _evba
-                0x80003104                _int0
-                0x80003112                _int1
-                0x80003120                _int2
-                0x8000312e                _int3
+.exception      0x80002e00      0x200
+ .exception     0x80002e00      0x200 src/ASF/avr32/drivers/intc/exception.o
+                0x80002e00                _evba
+                0x80002f04                _int0
+                0x80002f12                _int1
+                0x80002f20                _int2
+                0x80002f2e                _int3
 
 .fini
  *(.fini)
-                0x80003200                PROVIDE (__etext, .)
-                0x80003200                PROVIDE (_etext, .)
-                0x80003200                PROVIDE (etext, .)
+                0x80003000                PROVIDE (__etext, .)
+                0x80003000                PROVIDE (_etext, .)
+                0x80003000                PROVIDE (etext, .)
 
-.rodata         0x80003200      0x114
+.rodata         0x80003000      0x10c
  *(.rodata .rodata.* .gnu.linkonce.r.*)
  .rodata._int_handler_table
-                0x80003200       0xa0 src/ASF/avr32/drivers/intc/intc.o
+                0x80003000       0xa0 src/ASF/avr32/drivers/intc/intc.o
  .rodata.DBG_USART_GPIO_MAP.10878
-                0x800032a0       0x10 src/ASF/avr32/utils/debug/print_funcs.o
- .rodata.DIP204_SPI_GPIO_MAP.12236
-                0x800032b0       0x20 src/main.o
+                0x800030a0       0x10 src/ASF/avr32/utils/debug/print_funcs.o
+ .rodata.DIP204_SPI_GPIO_MAP.12235
+                0x800030b0       0x20 src/main.o
+ .rodata.ADC_GPIO_MAP.12281
+                0x800030d0        0x8 src/main.o
  .rodata.str1.4
-                0x800032d0       0x1c src/main.o
- .rodata.ADC_GPIO_MAP.12284
-                0x800032ec        0x8 src/main.o
+                0x800030d8       0x14 src/main.o
+ .rodata.C.65.12237
+                0x800030ec       0x10 src/main.o
  .rodata.USART_GPIO_MAP.12277
-                0x800032f4       0x10 src/main.o
- .rodata.C.65.12238
-                0x80003304       0x10 src/main.o
+                0x800030fc       0x10 src/main.o
 
 .rodata1
  *(.rodata1)
@@ -1935,10 +1937,10 @@ LOAD d:/program file/atmel/7.0/toolchain/avr32/avr32-gnu-toolchain/bin/../lib/gc
  *(.gcc_except_table)
  *(.gcc_except_table.*)
 
-.lalign         0x80003314        0x4
-                0x80003318                . = ALIGN (0x8)
- *fill*         0x80003314        0x4 
-                0x80003318                PROVIDE (_data_lma, .)
+.lalign         0x8000310c        0x4
+                0x80003110                . = ALIGN (0x8)
+ *fill*         0x8000310c        0x4 
+                0x80003110                PROVIDE (_data_lma, .)
                 0x00000004                . = ORIGIN (INTRAM)
 
 .dalign         0x00000004        0x4
@@ -2004,31 +2006,32 @@ LOAD d:/program file/atmel/7.0/toolchain/avr32/avr32-gnu-toolchain/bin/../lib/gc
 .ramtext
  *(.ramtext .ramtext.*)
 
-.ddalign        0x00000008        0x0 load address 0x80003318
+.ddalign        0x00000008        0x0 load address 0x80003110
                 0x00000008                . = ALIGN (0x8)
 
-.data           0x00000008        0xa load address 0x80003318
+.data           0x00000008        0xc load address 0x80003110
  *(.data .data.* .gnu.linkonce.d.*)
  .data.channel_id
                 0x00000008        0x4 src/ASF/avr32/components/display/dip204/dip204.o
- .data.adc      0x0000000c        0x4 src/main.o
-                0x0000000c                adc
  .data.adc_channel_pot
-                0x00000010        0x2 src/main.o
-                0x00000010                adc_channel_pot
+                0x0000000c        0x2 src/main.o
+                0x0000000c                adc_channel_pot
+ *fill*         0x0000000e        0x2 
+ .data.adc      0x00000010        0x4 src/main.o
+                0x00000010                adc
  *(.gnu.linkonce.d.*personality*)
 
 .data1
  *(.data1)
 
-.balign         0x00000012        0x6 load address 0x80003322
+.balign         0x00000014        0x4 load address 0x8000311c
                 0x00000018                . = ALIGN (0x8)
- *fill*         0x00000012        0x6 
+ *fill*         0x00000014        0x4 
                 0x00000018                PROVIDE (_edata, .)
                 0x00000018                PROVIDE (edata, .)
                 0x00000018                __bss_start = .
 
-.bss            0x00000018      0x120
+.bss            0x00000018      0x118
  *(.dynbss)
  *(.bss .bss.* .gnu.linkonce.b.*)
  .bss.pwm_channel
@@ -2075,26 +2078,20 @@ LOAD d:/program file/atmel/7.0/toolchain/avr32/avr32-gnu-toolchain/bin/../lib/gc
                 0x00000120        0x4 src/ASF/avr32/drivers/intc/intc.o
  .bss._int_line_handler_table_5
                 0x00000124        0x4 src/ASF/avr32/drivers/intc/intc.o
- .bss.sendPotData
-                0x00000128        0x4 src/main.o
-                0x00000128                sendPotData
- .bss.value_pot
-                0x0000012c        0x4 src/main.o
-                0x0000012c                value_pot
  *(COMMON)
- COMMON         0x00000130        0x4 src/main.o
-                0x00000130                char_recu
-                0x00000138                . = ALIGN (0x8)
- *fill*         0x00000134        0x4 
-                0x00000138                . = ALIGN (0x8)
-                0x00000138                _end = .
-                0x00000138                PROVIDE (end, .)
-                0x00000138                __heap_start__ = ALIGN (0x8)
+ COMMON         0x00000128        0x4 src/main.o
+                0x00000128                char_recu
+                0x00000130                . = ALIGN (0x8)
+ *fill*         0x0000012c        0x4 
+                0x00000130                . = ALIGN (0x8)
+                0x00000130                _end = .
+                0x00000130                PROVIDE (end, .)
+                0x00000130                __heap_start__ = ALIGN (0x8)
 
-.heap           0x00000138     0xeec8
+.heap           0x00000130     0xeed0
  *(.heap)
-                0x0000eec8                . = (__heap_size__ == __max_heap_size__)?(((ORIGIN (INTRAM) + 0xfffc) - __stack_size__) - ABSOLUTE (.)):__heap_size__
- *fill*         0x00000138     0xeec8 
+                0x0000eed0                . = (__heap_size__ == __max_heap_size__)?(((ORIGIN (INTRAM) + 0xfffc) - __stack_size__) - ABSOLUTE (.)):__heap_size__
+ *fill*         0x00000130     0xeed0 
                 0x0000f000                __heap_end__ = .
 
 .stab
@@ -2171,7 +2168,7 @@ LOAD d:/program file/atmel/7.0/toolchain/avr32/avr32-gnu-toolchain/bin/../lib/gc
                 0x00000680       0x58 src/main.o
 
 .debug_pubnames
-                0x00000000      0xf4f
+                0x00000000      0xf41
  *(.debug_pubnames)
  .debug_pubnames
                 0x00000000      0x114 src/ASF/avr32/components/display/dip204/dip204.o
@@ -2192,9 +2189,9 @@ LOAD d:/program file/atmel/7.0/toolchain/avr32/avr32-gnu-toolchain/bin/../lib/gc
  .debug_pubnames
                 0x00000d80      0x10f src/ASF/avr32/utils/debug/print_funcs.o
  .debug_pubnames
-                0x00000e8f       0xc0 src/main.o
+                0x00000e8f       0xb2 src/main.o
 
-.debug_info     0x00000000     0xdb34
+.debug_info     0x00000000     0xdb20
  *(.debug_info .gnu.linkonce.wi.*)
  .debug_info    0x00000000     0x1435 src/ASF/avr32/components/display/dip204/dip204.o
  .debug_info    0x00001435     0x1095 src/ASF/avr32/drivers/adc/adc.o
@@ -2208,7 +2205,7 @@ LOAD d:/program file/atmel/7.0/toolchain/avr32/avr32-gnu-toolchain/bin/../lib/gc
  .debug_info    0x000088d7     0x1681 src/ASF/avr32/utils/debug/print_funcs.o
  .debug_info    0x00009f58       0x7e src/ASF/avr32/utils/startup/startup_uc3.o
  .debug_info    0x00009fd6       0x85 src/ASF/avr32/utils/startup/trampoline_uc3.o
- .debug_info    0x0000a05b     0x3ad9 src/main.o
+ .debug_info    0x0000a05b     0x3ac5 src/main.o
 
 .debug_abbrev   0x00000000     0x1721
  *(.debug_abbrev)
@@ -2226,7 +2223,7 @@ LOAD d:/program file/atmel/7.0/toolchain/avr32/avr32-gnu-toolchain/bin/../lib/gc
  .debug_abbrev  0x000014d8       0x14 src/ASF/avr32/utils/startup/trampoline_uc3.o
  .debug_abbrev  0x000014ec      0x235 src/main.o
 
-.debug_line     0x00000000     0x54b4
+.debug_line     0x00000000     0x54aa
  *(.debug_line)
  .debug_line    0x00000000      0xaa3 src/ASF/avr32/components/display/dip204/dip204.o
  .debug_line    0x00000aa3      0x6a7 src/ASF/avr32/drivers/adc/adc.o
@@ -2240,9 +2237,9 @@ LOAD d:/program file/atmel/7.0/toolchain/avr32/avr32-gnu-toolchain/bin/../lib/gc
  .debug_line    0x00004185      0x7d3 src/ASF/avr32/utils/debug/print_funcs.o
  .debug_line    0x00004958       0xf2 src/ASF/avr32/utils/startup/startup_uc3.o
  .debug_line    0x00004a4a       0x67 src/ASF/avr32/utils/startup/trampoline_uc3.o
- .debug_line    0x00004ab1      0xa03 src/main.o
+ .debug_line    0x00004ab1      0x9f9 src/main.o
 
-.debug_frame    0x00000000      0xf88
+.debug_frame    0x00000000      0xf78
  *(.debug_frame)
  .debug_frame   0x00000000      0x1e4 src/ASF/avr32/components/display/dip204/dip204.o
  .debug_frame   0x000001e4       0xbc src/ASF/avr32/drivers/adc/adc.o
@@ -2253,7 +2250,7 @@ LOAD d:/program file/atmel/7.0/toolchain/avr32/avr32-gnu-toolchain/bin/../lib/gc
  .debug_frame   0x00000908      0x158 src/ASF/avr32/drivers/spi/spi.o
  .debug_frame   0x00000a60      0x2ac src/ASF/avr32/drivers/usart/usart.o
  .debug_frame   0x00000d0c      0x17c src/ASF/avr32/utils/debug/print_funcs.o
- .debug_frame   0x00000e88      0x100 src/main.o
+ .debug_frame   0x00000e88       0xf0 src/main.o
 
 .debug_str      0x00000000     0x2503
  *(.debug_str)
@@ -2276,9 +2273,9 @@ LOAD d:/program file/atmel/7.0/toolchain/avr32/avr32-gnu-toolchain/bin/../lib/gc
  .debug_str     0x0000231e      0x120 src/ASF/avr32/utils/debug/print_funcs.o
                                 0x62d (size before relaxing)
  .debug_str     0x0000243e       0xc5 src/main.o
-                                0xd56 (size before relaxing)
+                                0xd4c (size before relaxing)
 
-.debug_loc      0x00000000     0x243a
+.debug_loc      0x00000000     0x241b
  *(.debug_loc)
  .debug_loc     0x00000000      0x613 src/ASF/avr32/components/display/dip204/dip204.o
  .debug_loc     0x00000613      0x115 src/ASF/avr32/drivers/adc/adc.o
@@ -2289,7 +2286,7 @@ LOAD d:/program file/atmel/7.0/toolchain/avr32/avr32-gnu-toolchain/bin/../lib/gc
  .debug_loc     0x00001170      0x3bd src/ASF/avr32/drivers/spi/spi.o
  .debug_loc     0x0000152d      0x9c5 src/ASF/avr32/drivers/usart/usart.o
  .debug_loc     0x00001ef2      0x3bc src/ASF/avr32/utils/debug/print_funcs.o
- .debug_loc     0x000022ae      0x18c src/main.o
+ .debug_loc     0x000022ae      0x16d src/main.o
 
 .debug_macinfo  0x00000000   0x946458
  *(.debug_macinfo)
