@@ -1,12 +1,5 @@
 src/main.d src/main.o src/main.o: ../src/main.c ../src/asf.h \
- ../src/ASF/avr32/drivers/cpu/cycle_counter/cycle_counter.h \
- ../src/ASF/avr32/utils/compiler.h \
- ../src/ASF/avr32/utils/preprocessor/preprocessor.h \
- ../src/ASF/avr32/utils/preprocessor/tpaste.h \
- ../src/ASF/avr32/utils/preprocessor/stringz.h \
- ../src/ASF/avr32/utils/preprocessor/mrepeat.h \
- ../src/ASF/avr32/utils/preprocessor/preprocessor.h \
- ../src/ASF/common/utils/parts.h \
+ ../src/ASF/avr32/drivers/adc/adc.h \
  D:\Program\ File\Atmel\7.0\Packs\atmel\UC3A_DFP\1.0.53\include\AT32UC3A0512/avr32/io.h \
  D:\Program\ File\Atmel\7.0\Packs\atmel\UC3A_DFP\1.0.53\include\AT32UC3A0512/avr32/uc3a0512.h \
  D:\Program\ File\Atmel\7.0\Packs\atmel\UC3A_DFP\1.0.53\include\AT32UC3A0512/avr32/core_sc0_140.h \
@@ -34,6 +27,13 @@ src/main.d src/main.o src/main.o: ../src/main.c ../src/asf.h \
  D:\Program\ File\Atmel\7.0\Packs\atmel\UC3A_DFP\1.0.53\include\AT32UC3A0512/avr32/usart_400.h \
  D:\Program\ File\Atmel\7.0\Packs\atmel\UC3A_DFP\1.0.53\include\AT32UC3A0512/avr32/usbb_311.h \
  D:\Program\ File\Atmel\7.0\Packs\atmel\UC3A_DFP\1.0.53\include\AT32UC3A0512/avr32/wdt_231.h \
+ ../src/ASF/avr32/utils/compiler.h \
+ ../src/ASF/avr32/utils/preprocessor/preprocessor.h \
+ ../src/ASF/avr32/utils/preprocessor/tpaste.h \
+ ../src/ASF/avr32/utils/preprocessor/stringz.h \
+ ../src/ASF/avr32/utils/preprocessor/mrepeat.h \
+ ../src/ASF/avr32/utils/preprocessor/preprocessor.h \
+ ../src/ASF/common/utils/parts.h \
  ../src/ASF/avr32/utils/header_files/uc3d_defines_fix.h \
  ../src/ASF/avr32/utils/header_files/uc3l3_l4_defines_fix.h \
  d:\program\ file\atmel\7.0\toolchain\avr32\avr32-gnu-toolchain\bin\../lib/gcc/avr32/4.4.7/include/stddef.h \
@@ -57,6 +57,7 @@ src/main.d src/main.o src/main.o: ../src/main.c ../src/asf.h \
  ../src/ASF/common/utils/interrupt/interrupt_avr32.h \
  ../src/ASF/avr32/utils/preprocessor/tpaste.h \
  ../src/ASF/avr32/drivers/intc/intc.h \
+ ../src/ASF/avr32/drivers/cpu/cycle_counter/cycle_counter.h \
  ../src/ASF/avr32/utils/status_codes.h \
  ../src/ASF/common/services/delay/delay.h \
  ../src/ASF/common/services/clock/sysclk.h ../src/config/conf_clock.h \
@@ -78,25 +79,12 @@ src/main.d src/main.o src/main.o: ../src/main.c ../src/asf.h \
  ../src/ASF/avr32/drivers/pm/pm.h ../src/ASF/avr32/drivers/pm/sleep.h \
  ../src/ASF/avr32/drivers/pwm/pwm.h ../src/ASF/avr32/drivers/spi/spi.h \
  ../src/ASF/avr32/drivers/tc/tc.h ../src/ASF/avr32/drivers/usart/usart.h \
- ../src/ASF/avr32/utils/debug/print_funcs.h
+ ../src/ASF/avr32/utils/debug/print_funcs.h \
+ ../src/ASF/avr32/drivers/pm/pm.h
 
 ../src/asf.h:
 
-../src/ASF/avr32/drivers/cpu/cycle_counter/cycle_counter.h:
-
-../src/ASF/avr32/utils/compiler.h:
-
-../src/ASF/avr32/utils/preprocessor/preprocessor.h:
-
-../src/ASF/avr32/utils/preprocessor/tpaste.h:
-
-../src/ASF/avr32/utils/preprocessor/stringz.h:
-
-../src/ASF/avr32/utils/preprocessor/mrepeat.h:
-
-../src/ASF/avr32/utils/preprocessor/preprocessor.h:
-
-../src/ASF/common/utils/parts.h:
+../src/ASF/avr32/drivers/adc/adc.h:
 
 D:\Program\ File\Atmel\7.0\Packs\atmel\UC3A_DFP\1.0.53\include\AT32UC3A0512/avr32/io.h:
 
@@ -152,6 +140,20 @@ D:\Program\ File\Atmel\7.0\Packs\atmel\UC3A_DFP\1.0.53\include\AT32UC3A0512/avr3
 
 D:\Program\ File\Atmel\7.0\Packs\atmel\UC3A_DFP\1.0.53\include\AT32UC3A0512/avr32/wdt_231.h:
 
+../src/ASF/avr32/utils/compiler.h:
+
+../src/ASF/avr32/utils/preprocessor/preprocessor.h:
+
+../src/ASF/avr32/utils/preprocessor/tpaste.h:
+
+../src/ASF/avr32/utils/preprocessor/stringz.h:
+
+../src/ASF/avr32/utils/preprocessor/mrepeat.h:
+
+../src/ASF/avr32/utils/preprocessor/preprocessor.h:
+
+../src/ASF/common/utils/parts.h:
+
 ../src/ASF/avr32/utils/header_files/uc3d_defines_fix.h:
 
 ../src/ASF/avr32/utils/header_files/uc3l3_l4_defines_fix.h:
@@ -197,6 +199,8 @@ d:\program\ file\atmel\7.0\toolchain\avr32\avr32-gnu-toolchain\bin\../lib/gcc/av
 ../src/ASF/avr32/utils/preprocessor/tpaste.h:
 
 ../src/ASF/avr32/drivers/intc/intc.h:
+
+../src/ASF/avr32/drivers/cpu/cycle_counter/cycle_counter.h:
 
 ../src/ASF/avr32/utils/status_codes.h:
 
@@ -249,3 +253,5 @@ d:\program\ file\atmel\7.0\toolchain\avr32\avr32-gnu-toolchain\bin\../lib/gcc/av
 ../src/ASF/avr32/drivers/usart/usart.h:
 
 ../src/ASF/avr32/utils/debug/print_funcs.h:
+
+../src/ASF/avr32/drivers/pm/pm.h:

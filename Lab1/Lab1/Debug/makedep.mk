@@ -8,6 +8,8 @@ src\ASF\avr32\boards\evk1100\led.c
 
 src\ASF\avr32\components\display\dip204\dip204.c
 
+src\ASF\avr32\drivers\adc\adc.c
+
 src\ASF\avr32\drivers\flashc\flashc.c
 
 src\ASF\avr32\drivers\gpio\gpio.c
