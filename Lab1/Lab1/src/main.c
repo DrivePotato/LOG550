@@ -145,20 +145,33 @@ static void adc_int_handler(void)
 void init_pot(){
 	static const gpio_map_t ADC_GPIO_MAP =
 	{
-		{AVR32_ADC_AD_1_PIN, AVR32_ADC_AD_1_FUNCTION}
+		{ADC_POTENTIOMETER_PIN, ADC_POTENTIOMETER_FUNCTION}
 	};
 
-	// Assigner les pins du GPIO a etre utiliser par le USART1.
-	gpio_enable_module(ADC_GPIO_MAP,sizeof(ADC_GPIO_MAP) / sizeof(ADC_GPIO_MAP[0]));
+	volatile avr32_adc_t *adc = &AVR32_ADC; // ADC IP registers address
+	signed short adc_value_pot = -1;
 
-	// Initialise le USART1 en mode seriel RS232, a 57600 BAUDS, a FOSC0=12MHz.
-	//init_dbg_rs232_ex(57600,FOSC0);
+	// Assign the on-board sensors to their ADC channel.
+	unsigned short adc_channel_pot = ADC_POTENTIOMETER_CHANNEL;
 
-	// Enregister le USART interrupt handler au INTC, level INT1
-	INTC_register_interrupt(&adc_int_handler, AVR32_ADC_IRQ, AVR32_INTC_INT1);
+	// switch to oscillator 0
+	pm_switch_to_osc0(&AVR32_PM, FOSC0, OSC0_STARTUP);
 
-	// Activer la source d'interrution du UART en reception (RXRDY)
-	AVR32_USART1.ier = AVR32_USART_IER_RXRDY_MASK;
+	// init debug serial line
+	init_dbg_rs232(FOSC0);
+
+	// Assign and enable GPIO pins to the ADC function.
+	gpio_enable_module(ADC_GPIO_MAP, sizeof(ADC_GPIO_MAP) / sizeof(ADC_GPIO_MAP[0]));
+
+	// configure ADC
+	// Lower the ADC clock to match the ADC characteristics (because we configured
+	// the CPU clock to 12MHz, and the ADC clock characteristics are usually lower;
+	// cf. the ADC Characteristic section in the datasheet).
+	AVR32_ADC.mr |= 0x1 << AVR32_ADC_MR_PRESCAL_OFFSET;
+	adc_configure(adc);
+
+	// Enable the ADC channels.
+	adc_enable(adc,adc_channel_pot);
 }
 
 void initialization(){
@@ -199,5 +212,11 @@ int main(void)
 		else if(char_recu == 'x'){
 			// stop
 		}
+		
+		// launch conversion on all enabled channels
+		adc_start(adc);
+		// get value for the potentiometer adc channel
+		printLCD(adc_get_value(adc, adc_channel_pot), 1, 3);
+		// display value to user
 	}
 }
