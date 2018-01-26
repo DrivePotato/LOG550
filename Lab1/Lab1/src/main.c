@@ -16,7 +16,7 @@
 #define   FALSE   0
 
 
-U32 char_recu; 
+volatile U32 char_recu; 
 U32 value_pot = 0;
 int sendPotData = 0;
 volatile avr32_adc_t *adc = &AVR32_ADC; // ADC IP registers address
@@ -68,31 +68,6 @@ void init_lcd(){
 
 	// initialize LCD
 	dip204_init(backlight_PWM, TRUE);	
-}
-
-void init_pot(){
-	// GPIO pin/adc-function map.
-	// Add other pin here ... for the light sensor ..
-	static const gpio_map_t ADC_GPIO_MAP =
-	{
-	     {AVR32_ADC_AD_1_PIN, AVR32_ADC_AD_1_FUNCTION}
-	};
-	
-	
-	// init debug serial line
-	//pm_switch_to_osc0(&AVR32_PM, FOSC0, OSC0_STARTUP);
-	// Assign and enable GPIO pins to the ADC function.
-	gpio_enable_module(ADC_GPIO_MAP, sizeof(ADC_GPIO_MAP) / sizeof(ADC_GPIO_MAP[0]));
-	// configure ADC
-	// Lower the ADC clock to match the ADC characteristics (because we configured
-	// the CPU clock to 12MHz, and the ADC clock characteristics are usually lower;
-	// cf. the ADC Characteristic section in the datasheet).
-	AVR32_ADC.mr |= 0x1 << AVR32_ADC_MR_PRESCAL_OFFSET;
-	adc_configure(adc)	;
-	
-	// Enable the ADC channels.
-	adc_enable(adc,adc_channel_pot);
-	
 }
 
 void printLCD(U32 data, int x, int y){
@@ -156,8 +131,6 @@ void init_usart1(){
 	// Enregister le USART interrupt handler au INTC, level INT0
 	INTC_register_interrupt(&usart_int_handler, AVR32_USART1_IRQ, AVR32_INTC_INT0);
 
-	//print_dbg(">>");
-
 	// Activer la source d'interrution du UART en reception (RXRDY)
 	AVR32_USART1.ier = AVR32_USART_IER_RXRDY_MASK;
 }
@@ -166,58 +139,30 @@ void init_usart1(){
 __attribute__((__interrupt__))
 static void adc_int_handler(void)
 {
-U32 status = AVR32_ADC.sr;
-	printLCDstring("Int ADC", 1, 4);
-	//potentiometer
-	if(status & AVR32_ADC_IER_EOC1_MASK)
-	{
-		if(!(AVR32_USART1.csr & (AVR32_USART_CSR_TXRDY_MASK)))
-		{
-			// DEPASSEMENT dépassement au convertisseur ADC : ALLUME LED
-		}
-		
-		value_pot = AVR32_ADC.cdr1;
-		sendPotData = TRUE;
-		
-		printLCDstring("Pot:", 1, 3);
-		printLCD(value_pot, 5, 3);
-	}
-	
-	//light sensor
-	// ...
+	printLCDstring("ADC INT", 1, 3);
 }
 
-// code sur internet
-//__attribute__((__interrupt__))
-//static void adc_int( void )
-//{
-	//// Il y a une nouvelle valeur pour le capteur de lumière
-	//if ( AVR32_ADC.sr & AVR32_ADC_SR_EOC1_MASK )
-	//{
-		////lightValue = AVR32_ADC.cdr1;
-		////newLightValue = TRUE;
-	//}
-//
-	//// Il y a une nouvelle valeur pour le potentiomètre
-	//if ( AVR32_ADC.sr & AVR32_ADC_SR_EOC2_MASK )
-	//{
-		////potValue = AVR32_ADC.cdr2;
-		////newPotValue = TRUE;
-	//}
-//}
+void init_pot(){
+	static const gpio_map_t ADC_GPIO_MAP =
+	{
+		{AVR32_ADC_AD_1_PIN, AVR32_ADC_AD_1_FUNCTION}
+	};
 
-//static void adc_init( void )
-//{
-	//adc_configure(&AVR32_ADC);
-	//adc_enable(&AVR32_ADC, 1);
-	//adc_enable(&AVR32_ADC, 2);
-//
-	//INTC_register_interrupt(&adc_int, AVR32_ADC_IRQ, AVR32_INTC_INT0);
-	//AVR32_ADC.ier = AVR32_ADC_IER_EOC1_MASK | AVR32_ADC_IER_EOC2_MASK;
-//}
+	// Assigner les pins du GPIO a etre utiliser par le USART1.
+	gpio_enable_module(ADC_GPIO_MAP,sizeof(ADC_GPIO_MAP) / sizeof(ADC_GPIO_MAP[0]));
+
+	// Initialise le USART1 en mode seriel RS232, a 57600 BAUDS, a FOSC0=12MHz.
+	//init_dbg_rs232_ex(57600,FOSC0);
+
+	// Enregister le USART interrupt handler au INTC, level INT1
+	INTC_register_interrupt(&adc_int_handler, AVR32_ADC_IRQ, AVR32_INTC_INT1);
+
+	// Activer la source d'interrution du UART en reception (RXRDY)
+	AVR32_USART1.ier = AVR32_USART_IER_RXRDY_MASK;
+}
 
 void initialization(){
-	char_recu = 'a';
+	char_recu = ' ';
 	
 	// Init le LCD avant de switch to osc0
 	init_lcd();
@@ -226,26 +171,9 @@ void initialization(){
 	Disable_global_interrupt();
 	// WARNING: NE PEUT PLUS PRINT AU LCD AVEC LE SWITCH FUNCTION, Au boot, 115kHz, on doit passer au crystal FOSC0=12MHz avec le PM
 	pm_switch_to_osc0(&AVR32_PM, FOSC0, OSC0_STARTUP);
-	AVR32_ADC.mr |= 1 << AVR32_ADC_LOWRES_OFFSET;
 	// Preparatif pour l'enregistrement des interrupt handler du INTC.
 	INTC_init_interrupts();
-	
-	
-	
-	// -------------------------------------------------------------------
-	// ADC INITIALIZATION
-	// -------------------------------------------------------------------
-	pcl_switch_to_osc(PCL_OSC0, FOSC0, OSC0_STARTUP);
-	//Configure the ADC to use 8 bit values instead of 10
-	AVR32_ADC.mr |= 1 << AVR32_ADC_LOWRES_OFFSET;
-	//Enable the Light Sensor
-	AVR32_ADC.cher = 1 << 2;
-	//Enable the potentiometer
-	AVR32_ADC.cher = 1 << 1;
-	INTC_register_interrupt(&adc_int_handler,AVR32_ADC_IRQ, AVR32_INTC_INT3);
-	AVR32_ADC.ier = AVR32_ADC_IER_EOC2_MASK | AVR32_ADC_IER_EOC1_MASK;
-	
-	
+	init_pot();
 	init_usart1();
 	
 	// Autoriser les interruptions.
@@ -259,16 +187,13 @@ int main(void)
 	printLCDstring("Prototype 1", 1, 1);
 	printLCDstring("Recu: ", 1, 2);
 	
-	
-	int i;
-	signed short adc_value_pot = -1; // displayed value
-	while (TRUE)    // use a volatile true variable to avoid warning on unreachable code
+	while (TRUE)  
 	{
 		printLCD(char_recu, 7, 2);
 		if(char_recu == 's'){
-			// send pot value
-			//uint32_t value = adc_get_value(adc, adc_channel_pot);
-			value_pot = AVR32_ADC.cdr1;
+			// Get value from adc
+			//char value = (adc_get_value(adc, adc_channel_pot) << 7) | 0x01;
+			//printLCDstring(adc_get_value(adc, adc_channel_pot), 1, 3);
 			// send light value
 		}
 		else if(char_recu == 'x'){
