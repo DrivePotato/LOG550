@@ -20,6 +20,7 @@ volatile U32 char_recu;
 int sendPotData = 0;
 volatile avr32_adc_t *adc = &AVR32_ADC; // ADC IP registers address
 unsigned short adc_channel_pot = 1;
+unsigned short adc_channel_light = 2;
 
 
 void init_lcd(){
@@ -104,6 +105,8 @@ void init_usart1(){
 		{AVR32_USART1_TXD_0_0_PIN, AVR32_USART1_TXD_0_0_FUNCTION}
 	};
 
+	
+
 	// Assigner les pins du GPIO a etre utiliser par le USART1.
 	gpio_enable_module(USART_GPIO_MAP,sizeof(USART_GPIO_MAP) / sizeof(USART_GPIO_MAP[0]));
 
@@ -117,54 +120,30 @@ void init_usart1(){
 	AVR32_USART1.ier = AVR32_USART_IER_RXRDY_MASK;
 }
 
+__attribute__((__interrupt__))
+static void adc_int_handler(){
+	// Get value for the potentiometer adc channel
+	AVR32_USART1.thr = (char)((adc_get_value(adc, adc_channel_pot) >> 2) & 0b11111110);
+	//AVR32_USART1.thr = (char)((adc_get_value(adc, adc_channel_light) >> 2) | 0x01);
+}
+
 void init_pot(){
-	static const gpio_map_t ADC_GPIO_MAP =
-	{
-		{ADC_POTENTIOMETER_PIN, ADC_POTENTIOMETER_FUNCTION}
-	};
-
-	volatile avr32_adc_t *adc = &AVR32_ADC; // ADC IP registers address
-	signed short adc_value_pot = -1;
-
-	// Assign the on-board sensors to their ADC channel.
-	unsigned short adc_channel_pot = ADC_POTENTIOMETER_CHANNEL;
-
-	// switch to oscillator 0
-	pm_switch_to_osc0(&AVR32_PM, FOSC0, OSC0_STARTUP);
-
-	// init debug serial line
-	init_dbg_rs232(FOSC0);
-
-	// Assign and enable GPIO pins to the ADC function.
-	gpio_enable_module(ADC_GPIO_MAP, sizeof(ADC_GPIO_MAP) / sizeof(ADC_GPIO_MAP[0]));
-
-	// configure ADC
-	// Lower the ADC clock to match the ADC characteristics (because we configured
-	// the CPU clock to 12MHz, and the ADC clock characteristics are usually lower;
-	// cf. the ADC Characteristic section in the datasheet).
-	AVR32_ADC.mr |= 0x1 << AVR32_ADC_MR_PRESCAL_OFFSET;
-	adc_configure(adc);
-
-	// Enable the ADC channels.
-	adc_enable(adc,adc_channel_pot);
+	adc_configure(&AVR32_ADC);
+	adc_enable(&AVR32_ADC, adc_channel_pot);
+	//adc_enable(&AVR32_ADC, adc_channel_light);
+	INTC_register_interrupt(&adc_int_handler, AVR32_ADC_IRQ, AVR32_INTC_INT0);
+	AVR32_ADC.ier = AVR32_ADC_IER_EOC1_MASK | AVR32_ADC_IER_EOC2_MASK;
 }
 
 void initialization(){
 	char_recu = ' ';
 	
-	// Init le LCD avant de switch to osc0
-	init_lcd();
-	
-	// Desactive les interruptions pendant la configuration.
 	Disable_global_interrupt();
-	// WARNING: NE PEUT PLUS PRINT AU LCD AVEC LE SWITCH FUNCTION, Au boot, 115kHz, on doit passer au crystal FOSC0=12MHz avec le PM
-	pm_switch_to_osc0(&AVR32_PM, FOSC0, OSC0_STARTUP);
-	// Preparatif pour l'enregistrement des interrupt handler du INTC.
 	INTC_init_interrupts();
+	init_lcd();
 	init_pot();
+	pm_switch_to_osc0(&AVR32_PM, FOSC0, OSC0_STARTUP);
 	init_usart1();
-	
-	// Autoriser les interruptions.
 	Enable_global_interrupt();
 }
  
@@ -179,9 +158,8 @@ int main(void)
 	{
 		printLCD(char_recu, 7, 2);
 		if(char_recu == 's'){
-			adc_start(adc);
-			// Get value for the potentiometer adc channel
-			AVR32_USART1.thr = ((adc_get_value(adc, adc_channel_pot) >> 2) & 0b11111110);//& AVR32_USART_THR_TXCHR_MASK;
+			//adc_start(adc);
+			AVR32_ADC.cr = AVR32_ADC_START_MASK;
 		}
 		else if(char_recu == 'x'){
 			// stop
