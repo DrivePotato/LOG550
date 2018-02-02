@@ -12,20 +12,27 @@
 #include "gpio.h"
 #include "pm.h"
 #include "adc.h"
-#include "tc.h"
 #define   TRUE   1
 #define   FALSE   0
 
-volatile int *aqcuisition = 0;
-U8 u8LedMap=0x01;
-volatile U32 i , k;
+/*   Timer counter constant */
+#  define TC_CHANNEL                  0
+#  define EXAMPLE_TC                  (&AVR32_TC)
+#  define EXAMPLE_TC_IRQ_GROUP        AVR32_TC_IRQ_GROUP
+#  define EXAMPLE_TC_IRQ              AVR32_TC_IRQ0
+#  define FPBA                        FOSC0          // FOSC0 est a 12Mhz
+
+
+volatile int aqcuisition = TRUE;
+volatile avr32_tc_t *tc =  (&AVR32_TC);
+
+
 volatile U32 char_recu; 
 int sendPotData = 0;
 volatile avr32_adc_t *adc = &AVR32_ADC; // ADC IP registers address
 unsigned short adc_channel_pot = 1;
 unsigned short adc_channel_light = 2;
 
-volatile avr32_tc_t *tc = EXAMPLE_TC;
 
 void init_lcd(){
 	// Assign I/Os to SPI
@@ -87,6 +94,20 @@ void printLCDstring(char * data, int x, int y){
 }
 
 __attribute__((__interrupt__))
+static void tc_irq(void)
+{
+	// La lecture du registre SR efface le fanion de l'interruption.
+	tc_read_sr(EXAMPLE_TC, TC_CHANNEL);
+
+	// Toggle le premier et le second LED.
+	gpio_tgl_gpio_pin(LED0_GPIO);
+
+	//Toogle LED2 si en mode acquisition
+	if(aqcuisition){
+		gpio_tgl_gpio_pin(LED1_GPIO);
+	}
+}
+__attribute__((__interrupt__))
 static void usart_int_handler(void)
 {
 	// Si cette interruption est lancee par une reception (bit RXRDY=1)
@@ -99,20 +120,6 @@ static void usart_int_handler(void)
 		// get value for the potentiometer adc channel
 		// Retransmettre un caractere vers le PC
 		AVR32_USART1.idr = AVR32_USART_IDR_TXRDY_MASK;
-	}
-}
-
-static void tc_irq(void)
-{
-	// La lecture du registre SR efface le fanion de l'interruption.
-	tc_read_sr(EXAMPLE_TC, TC_CHANNEL);
-
-	// Toggle le premier et le second LED.
-	gpio_tgl_gpio_pin(LED0_GPIO);
-	
-	//Toogle LED2 si en mode acquisition
-	if(*aqcuisition){
-		gpio_tgl_gpio_pin(LED1_GPIO);
 	}
 }
 
@@ -153,7 +160,49 @@ void init_pot(){
 	AVR32_ADC.ier = AVR32_ADC_IER_EOC1_MASK | AVR32_ADC_IER_EOC2_MASK;
 }
 
+
 void init_tc(){
+
+	static const tc_waveform_opt_t WAVEFORM_OPT =
+	{
+		.channel  = TC_CHANNEL,                        // Channel selection.
+
+		.bswtrg   = TC_EVT_EFFECT_NOOP,                // Software trigger effect on TIOB.
+		.beevt    = TC_EVT_EFFECT_NOOP,                // External event effect on TIOB.
+		.bcpc     = TC_EVT_EFFECT_NOOP,                // RC compare effect on TIOB.
+		.bcpb     = TC_EVT_EFFECT_NOOP,                // RB compare effect on TIOB.
+
+		.aswtrg   = TC_EVT_EFFECT_NOOP,                // Software trigger effect on TIOA.
+		.aeevt    = TC_EVT_EFFECT_NOOP,                // External event effect on TIOA.
+		.acpc     = TC_EVT_EFFECT_NOOP,                // RC compare effect on TIOA: toggle.
+		.acpa     = TC_EVT_EFFECT_NOOP,                // RA compare effect on TIOA: toggle
+		.wavsel   = TC_WAVEFORM_SEL_UP_MODE_RC_TRIGGER,// Waveform selection: Up mode with automatic trigger(reset) on RC compare.
+		.enetrg   = FALSE,                             // External event trigger enable.
+		.eevt     = 0,                                 // External event selection.
+		.eevtedg  = TC_SEL_NO_EDGE,                    // External event edge selection.
+		.cpcdis   = FALSE,                             // Counter disable when RC compare.
+		.cpcstop  = FALSE,                             // Counter clock stopped with RC compare.
+
+		.burst    = FALSE,                             // Burst signal selection.
+		.clki     = FALSE,                             // Clock inversion.
+		.tcclks   = TC_CLOCK_SOURCE_TC4                // Internal source clock 3, connected to fPBA / 8.
+	};
+	
+	
+
+	static const tc_interrupt_t TC_INTERRUPT =
+	{
+		.etrgs = 0,
+		.ldrbs = 0,
+		.ldras = 0,
+		.cpcs  = 1,
+		.cpbs  = 0,
+		.cpas  = 0,
+		.lovrs = 0,
+		.covfs = 0
+	};
+
+
 	  /*! \brief Main function:
    *  - Configure the CPU to run at 12MHz
    *  - Register the TC interrupt (GCC only)
@@ -187,6 +236,7 @@ void init_tc(){
 
 }
 
+
 void initialization(){
 	char_recu = ' ';
 	
@@ -196,8 +246,8 @@ void initialization(){
 	init_pot();
 	pm_switch_to_osc0(&AVR32_PM, FOSC0, OSC0_STARTUP);
 	init_usart1();
-	init_tc()
-	// Autoriser les interruptions.
+	init_tc();
+
 	Enable_global_interrupt();
 }
  
@@ -210,35 +260,17 @@ int main(void)
 	
 	while (TRUE)  
 	{
-		//Activer LED1
-		LED_Display(u8LedMap);
-		
-		
-		
 		printLCD(char_recu, 7, 2);
 		if(char_recu == 's'){
-			adc_start(adc);
-			// Get value for the potentiometer adc channel
-			AVR32_USART1.thr = ((adc_get_value(adc, adc_channel_pot) >> 2) & 0b11111110);//& AVR32_USART_THR_TXCHR_MASK;
-			*aqcuisition = TRUE;
-			
-			
-
 			//adc_start(adc);
 			AVR32_ADC.cr = AVR32_ADC_START_MASK;
+			aqcuisition = TRUE;
+
 		}
 		else if(char_recu == 'x'){
 			// stop
-			*aqcuisition = FALSE;
+			aqcuisition = FALSE;
 
 		}
-		
-		
-		// TODO Allumer LED3 si depassement au convertisseur ADC
-		
-		
-		// TODO Allumer LED3 si depassement au convertisseur UART
-		
-		
 	}
 }
