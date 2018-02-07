@@ -23,7 +23,7 @@
 #  define FPBA                        FOSC0          // FOSC0 est a 12Mhz
 
 
-volatile int aqcuisition = TRUE;
+volatile int aqcuisition = FALSE;
 volatile avr32_tc_t *tc =  (&AVR32_TC);
 
 
@@ -107,6 +107,7 @@ static void tc_irq(void)
 		gpio_tgl_gpio_pin(LED1_GPIO);
 	}
 }
+
 __attribute__((__interrupt__))
 static void usart_int_handler(void)
 {
