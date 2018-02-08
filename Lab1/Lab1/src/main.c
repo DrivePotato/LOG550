@@ -84,13 +84,15 @@ void init_lcd(){
 void printLCD(U32 data, int x, int y){
 	dip204_set_cursor_position(x,y);
 	dip204_write_data(data);
-	dip204_set_cursor_position(x,y);
+	dip204_set_cursor_position(1,1);
+	dip204_hide_cursor();
+	
 }
 
 void printLCDstring(char * data, int x, int y){
 	dip204_set_cursor_position(x,y);
 	dip204_write_string(data);
-	dip204_set_cursor_position(x,y);
+	dip204_set_cursor_position(1,1);
 }
 
 __attribute__((__interrupt__))
