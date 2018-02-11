@@ -22,77 +22,11 @@
 #  define TC_IRQ0						AVR32_TC_IRQ0
 #  define FPBA							FOSC0          // FOSC0 est a 12Mhz
 
-
-volatile int aqcuisition = FALSE;
 volatile avr32_tc_t *tc =  (&AVR32_TC);
-
-
 volatile U32 char_recu; 
-int sendPotData = 0;
-volatile avr32_adc_t *adc = &AVR32_ADC; // ADC IP registers address
-unsigned short adc_channel_pot = 1;
-unsigned short adc_channel_light = 2;
-
-
-void init_lcd(){
-	// Assign I/Os to SPI
-	static const gpio_map_t DIP204_SPI_GPIO_MAP =
-	{
-		{DIP204_SPI_SCK_PIN,  DIP204_SPI_SCK_FUNCTION },  // SPI Clock.
-		{DIP204_SPI_MISO_PIN, DIP204_SPI_MISO_FUNCTION},  // MISO.
-		{DIP204_SPI_MOSI_PIN, DIP204_SPI_MOSI_FUNCTION},  // MOSI.
-		{DIP204_SPI_NPCS_PIN, DIP204_SPI_NPCS_FUNCTION}   // Chip Select NPCS.
-	};
-	
-	
-	// add the spi options driver structure for the LCD DIP204
-	spi_options_t spiOptions =
-	{
-		.reg          = DIP204_SPI_NPCS,
-		.baudrate     = 1000000,
-		.bits         = 8,
-		.spck_delay   = 0,
-		.trans_delay  = 0,
-		.stay_act     = 1,
-		.spi_mode     = 0,
-		.modfdis      = 1
-	};
-	
-	
-	gpio_enable_module(DIP204_SPI_GPIO_MAP,
-	sizeof(DIP204_SPI_GPIO_MAP) / sizeof(DIP204_SPI_GPIO_MAP[0]));
-
-	// Initialize as master
-	spi_initMaster(DIP204_SPI, &spiOptions);
-
-	// Set selection mode: variable_ps, pcs_decode, delay
-	spi_selectionMode(DIP204_SPI, 0, 0, 0);
-
-	// Enable SPI
-	spi_enable(DIP204_SPI);
-
-	// setup chip registers
-	spi_setupChipReg(DIP204_SPI, &spiOptions, FOSC0);
-
-	// initialize delay driver
-	delay_init( FOSC0 );
-
-	// initialize LCD
-	dip204_init(backlight_PWM, TRUE);	
-}
-
-void printLCD(U32 data, int x, int y){
-	dip204_set_cursor_position(x,y);
-	dip204_write_data(data);
-	dip204_hide_cursor();
-	
-}
-
-void printLCDstring(char * data, int x, int y){
-	dip204_set_cursor_position(x,y);
-	dip204_write_string(data);
-	dip204_hide_cursor();
-}
+volatile int SENSOR_LIGHT_HAS_VALUE;
+volatile int SENSOR_POT_HAS_VALUE;
+volatile int aqcuisition = 0;
 
 __attribute__((__interrupt__))
 static void tc_irq(void)
@@ -117,11 +51,6 @@ static void usart_int_handler(void)
 	{
 		//Lire le char recu dans registre RHR, et le stocker dans un 32bit
 		char_recu = (AVR32_USART1.rhr & AVR32_USART_RHR_RXCHR_MASK);
-	}
-	else if(AVR32_USART1.csr & (AVR32_USART_CSR_TXRDY_MASK)){
-		// get value for the potentiometer adc channel
-		// Retransmettre un caractere vers le PC
-		AVR32_USART1.idr = AVR32_USART_IDR_TXRDY_MASK;
 	}
 }
 
@@ -150,18 +79,62 @@ void init_usart1(){
 __attribute__((__interrupt__))
 static void adc_int_handler(){
 	// Get value for the potentiometer adc channel
-	AVR32_USART1.thr = (char)((adc_get_value(adc, adc_channel_pot) >> 2) & 0b11111110);
+	//AVR32_USART1.thr = (char)((adc_get_value(adc, adc_channel_pot) >> 2) & 0b11111110);
 	//AVR32_USART1.thr = (char)((adc_get_value(adc, adc_channel_light) >> 2) | 0x01);
+	//if(AVR32_USART1.csr & (AVR32_USART_CSR_TXRDY_MASK)){
+		//if(AVR32_ADC.sr & AVR32_ADC_SR_EOC1_MASK){
+			//AVR32_USART1.thr = (char)((adc_get_value(&AVR32_ADC, adc_channel_pot) >> 2) & 0b11111110);
+				//AVR32_USART1.thr = (char)((AVR32_ADC.cdr1 >> 2) & 0b11111110); // POT
+			 
+			//SENSOR_POT_HAS_VALUE = TRUE;
+		//	SENSOR_LIGHT_HAS_VALUE = TRUE;
+		//}
+	//}
+	//if(adc->sr & AVR32_ADC_SR_EOC2_MASK){
+	//	sensorPotValue = adc_get_value(adc, adc_channel_pot);	
+	//	SENSOR_LIGHT_HAS_VALUE = FALSE;
+	//}
+	
+	
+	
+	
+	//Retransmettre ce caractere vers le PC, si transmetteur disponible, renvoi un echo
+	if (AVR32_USART1.csr & (AVR32_USART_CSR_TXRDY_MASK))
+	{
+		if(SENSOR_LIGHT_HAS_VALUE){
+			if ( AVR32_ADC.sr & AVR32_ADC_SR_EOC2_MASK ){
+				AVR32_USART1.thr =(char)((adc_get_value(&AVR32_ADC, ADC_LIGHT_CHANNEL) >> 2) | 0x01); // & AVR32_USART_THR_TXCHR_MASK on renvoi le char
+				// Activer la source d'interrution du UART en fin de transmission (TXRDY)
+				AVR32_USART1.ier = AVR32_USART_IER_TXRDY_MASK;
+			}
+		}
+		
+		if(SENSOR_POT_HAS_VALUE){
+			//AVR32_USART1.thr = (char)((adc_get_value(&AVR32_ADC, ADC_POTENTIOMETER_CHANNEL) >> 2) & 0b11111110) ; 
+			// Activer la source d'interrution du UART en fin de transmission (TXRDY)
+			AVR32_USART1.ier = AVR32_USART_IER_TXRDY_MASK;
+		}
+	}
 }
 
-void init_pot(){
+void init_adc(){
+	const gpio_map_t ADC_GPIO_MAP = {
+		{ADC_LIGHT_PIN, ADC_LIGHT_FUNCTION},
+		{ADC_POTENTIOMETER_PIN, ADC_POTENTIOMETER_FUNCTION}
+	};
+	
+	/* Assign and enable GPIO pins to the ADC function. */
+	gpio_enable_module(ADC_GPIO_MAP, sizeof(ADC_GPIO_MAP) /
+	sizeof(ADC_GPIO_MAP[0]));
+	/* Configure the ADC peripheral module.
+	 * Lower the ADC clock to match the ADC characteristics (because we
+	 * configured the CPU clock to 12MHz, and the ADC clock characteristics are
+	 *  usually lower; cf. the ADC Characteristic section in the datasheet). */
+	AVR32_ADC.mr |= 0x1 << AVR32_ADC_MR_PRESCAL_OFFSET;
 	adc_configure(&AVR32_ADC);
-	adc_enable(&AVR32_ADC, adc_channel_pot);
-	//adc_enable(&AVR32_ADC, adc_channel_light);
-	INTC_register_interrupt(&adc_int_handler, AVR32_ADC_IRQ, AVR32_INTC_INT0);
-	AVR32_ADC.ier = AVR32_ADC_IER_EOC1_MASK | AVR32_ADC_IER_EOC2_MASK;
+	adc_enable(&AVR32_ADC, ADC_LIGHT_CHANNEL); //PROBLEME EST QUAND ON ENABLE LE LIGHT SENSOR ...
+	adc_enable(&AVR32_ADC, ADC_POTENTIOMETER_CHANNEL);
 }
-
 
 void init_tc(){
 
@@ -238,19 +211,14 @@ void init_tc(){
 
 }
 
-
 void initialization(){
 	char_recu = ' ';
 	
 	Disable_global_interrupt();
 	INTC_init_interrupts();
-
-	init_lcd();
-	init_pot();
-	pm_switch_to_osc0(&AVR32_PM, FOSC0, OSC0_STARTUP);
+	init_adc();
 	init_usart1();
 	init_tc();
-	
 	Enable_global_interrupt();
 }
  
@@ -258,22 +226,29 @@ int main(void)
 {
 	initialization();
 	
-	printLCDstring("Prototype 1", 1, 1);
-	printLCDstring("Recu: ", 1, 2);
-	
+	SENSOR_LIGHT_HAS_VALUE = FALSE;
+	SENSOR_POT_HAS_VALUE = TRUE;
 	while (TRUE)  
 	{
-		printLCD(char_recu, 7, 2);
 		if(char_recu == 's'){
-			//adc_start(adc);
-			AVR32_ADC.cr = AVR32_ADC_START_MASK;
+			adc_start(&AVR32_ADC);
 			aqcuisition = TRUE;
-
+			
+			if(SENSOR_LIGHT_HAS_VALUE){
+				AVR32_USART1.thr = (char)((adc_get_value(&AVR32_ADC, ADC_LIGHT_CHANNEL) >> 2) | 0x01);	
+				SENSOR_LIGHT_HAS_VALUE = FALSE;
+				SENSOR_POT_HAS_VALUE = TRUE;
+			}
+			else if(SENSOR_POT_HAS_VALUE){
+				AVR32_USART1.thr = (char)((adc_get_value(&AVR32_ADC, ADC_POTENTIOMETER_CHANNEL) >> 2) & 0b11111110);
+				SENSOR_LIGHT_HAS_VALUE = TRUE;
+				SENSOR_POT_HAS_VALUE = FALSE;
+			}
+			
+			AVR32_USART1.idr = AVR32_USART_IDR_TXRDY_MASK;
 		}
 		else if(char_recu == 'x'){
-			// stop
 			aqcuisition = FALSE;
-
 		}
 	}
 }
