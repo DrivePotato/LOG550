@@ -21,6 +21,12 @@
 #  define TC_IRQ_GROUP					AVR32_TC_IRQ_GROUP
 #  define TC_IRQ0						AVR32_TC_IRQ0
 #  define FPBA							FOSC0          // FOSC0 est a 12Mhz
+# define BASE_FREQ                      1000
+# define BPIO_FREQ                      2000
+
+# define MODE1							TRUE
+# define ADC_SPEED1						1000
+# define ADC_SPEED2						2000
 
 volatile avr32_tc_t *tc =  (&AVR32_TC);
 volatile U32 char_recu; 
@@ -34,7 +40,7 @@ static void tc_irq(void)
 	// La lecture du registre SR efface le fanion de l'interruption.
 	tc_read_sr(TC, TC_CHANNEL);
 
-	// Toggle le premier et le second LED.
+	// Toggle le un LED
 	gpio_tgl_gpio_pin(LED0_GPIO);
 
 	//Toogle LED2 si en mode acquisition
@@ -210,6 +216,25 @@ void init_tc(){
   tc_start(tc, TC_CHANNEL);                    // And start the timer/counter.
 
 }
+__attribute__((__interrupt__))
+static void toggle_bp0_handler(){
+
+		
+		 if( gpio_get_pin_interrupt_flag( AVR32_PIN_PB00 ) )
+		 {		
+			 	gpio_tgl_gpio_pin(LED2_GPIO);
+
+			 // Clear the interrupt flag of the pin PB2 is mapped to.
+			 gpio_clear_pin_interrupt_flag(AVR32_PIN_PB00);
+		 }
+		
+}
+void initPBO(){
+	gpio_enable_module_pin(AVR32_PIN_PB00,&toggle_bp0_handler);
+	gpio_enable_pin_interrupt(AVR32_PIN_PB00, GPIO_PIN_CHANGE);
+	INTC_register_interrupt( &toggle_bp0_handler, AVR_PI, AVR32_INTC_INT3);
+
+}
 
 void initialization(){
 	char_recu = ' ';
@@ -219,6 +244,7 @@ void initialization(){
 	init_adc();
 	init_usart1();
 	init_tc();
+	initPBO();
 	Enable_global_interrupt();
 }
  
@@ -250,5 +276,11 @@ int main(void)
 		else if(char_recu == 'x'){
 			aqcuisition = FALSE;
 		}
+		
+	
+				
+		
+		
+
 	}
 }
