@@ -10,6 +10,7 @@
 #include <asf.h>   
 #include "compiler.h" // Definitions utile: de U8, S8, U16, S16, U32, S32, U32, U62, F32
 #include "gpio.h"
+#include "usart.h"
 #include "pm.h"
 #include "adc.h"
 #define   TRUE   1
@@ -78,40 +79,14 @@ void init_usart1(){
 
 __attribute__((__interrupt__))
 static void adc_int_handler(){
-	// Get value for the potentiometer adc channel
-	//AVR32_USART1.thr = (char)((adc_get_value(adc, adc_channel_pot) >> 2) & 0b11111110);
-	//AVR32_USART1.thr = (char)((adc_get_value(adc, adc_channel_light) >> 2) | 0x01);
-	//if(AVR32_USART1.csr & (AVR32_USART_CSR_TXRDY_MASK)){
-		//if(AVR32_ADC.sr & AVR32_ADC_SR_EOC1_MASK){
-			//AVR32_USART1.thr = (char)((adc_get_value(&AVR32_ADC, adc_channel_pot) >> 2) & 0b11111110);
-				//AVR32_USART1.thr = (char)((AVR32_ADC.cdr1 >> 2) & 0b11111110); // POT
-			 
-			//SENSOR_POT_HAS_VALUE = TRUE;
-		//	SENSOR_LIGHT_HAS_VALUE = TRUE;
-		//}
-	//}
-	//if(adc->sr & AVR32_ADC_SR_EOC2_MASK){
-	//	sensorPotValue = adc_get_value(adc, adc_channel_pot);	
-	//	SENSOR_LIGHT_HAS_VALUE = FALSE;
-	//}
-	
-	
-	
-	
-	//Retransmettre ce caractere vers le PC, si transmetteur disponible, renvoi un echo
+	//Retransmettre ce caractere vers le PC, si transmetteur disponible
 	if (AVR32_USART1.csr & (AVR32_USART_CSR_TXRDY_MASK))
 	{
 		if(SENSOR_LIGHT_HAS_VALUE){
-			if ( AVR32_ADC.sr & AVR32_ADC_SR_EOC2_MASK ){
-				AVR32_USART1.thr =(char)((adc_get_value(&AVR32_ADC, ADC_LIGHT_CHANNEL) >> 2) | 0x01); // & AVR32_USART_THR_TXCHR_MASK on renvoi le char
-				// Activer la source d'interrution du UART en fin de transmission (TXRDY)
-				AVR32_USART1.ier = AVR32_USART_IER_TXRDY_MASK;
-			}
+			AVR32_USART1.ier = AVR32_USART_IER_TXRDY_MASK;
 		}
 		
 		if(SENSOR_POT_HAS_VALUE){
-			//AVR32_USART1.thr = (char)((adc_get_value(&AVR32_ADC, ADC_POTENTIOMETER_CHANNEL) >> 2) & 0b11111110) ; 
-			// Activer la source d'interrution du UART en fin de transmission (TXRDY)
 			AVR32_USART1.ier = AVR32_USART_IER_TXRDY_MASK;
 		}
 	}
@@ -132,7 +107,7 @@ void init_adc(){
 	 *  usually lower; cf. the ADC Characteristic section in the datasheet). */
 	AVR32_ADC.mr |= 0x1 << AVR32_ADC_MR_PRESCAL_OFFSET;
 	adc_configure(&AVR32_ADC);
-	adc_enable(&AVR32_ADC, ADC_LIGHT_CHANNEL); //PROBLEME EST QUAND ON ENABLE LE LIGHT SENSOR ...
+	adc_enable(&AVR32_ADC, ADC_LIGHT_CHANNEL);
 	adc_enable(&AVR32_ADC, ADC_POTENTIOMETER_CHANNEL);
 }
 
@@ -234,18 +209,27 @@ int main(void)
 			adc_start(&AVR32_ADC);
 			aqcuisition = TRUE;
 			
-			if(SENSOR_LIGHT_HAS_VALUE){
-				AVR32_USART1.thr = (char)((adc_get_value(&AVR32_ADC, ADC_LIGHT_CHANNEL) >> 2) | 0x01);	
-				SENSOR_LIGHT_HAS_VALUE = FALSE;
-				SENSOR_POT_HAS_VALUE = TRUE;
+			// SURVIENT LORS D'UN DÉPASSEMENT DE CONVERSION DE L'ADC
+			if(!adc_check_eoc(&AVR32_ADC, ADC_LIGHT_CHANNEL) || !adc_check_eoc(&AVR32_ADC, ADC_POTENTIOMETER_CHANNEL)){
+				gpio_tgl_gpio_pin(LED2_GPIO);
 			}
-			else if(SENSOR_POT_HAS_VALUE){
+			
+			// SURVIENT LORS D'UN DÉPASSEMENT DE FIN DE TRANSMISSION DE L'USART
+			if (!(AVR32_USART1.csr & (AVR32_USART_CSR_TXRDY_MASK))){
+				gpio_tgl_gpio_pin(LED3_GPIO);
+			}
+			
+			if(SENSOR_POT_HAS_VALUE){
 				AVR32_USART1.thr = (char)((adc_get_value(&AVR32_ADC, ADC_POTENTIOMETER_CHANNEL) >> 2) & 0b11111110);
 				SENSOR_LIGHT_HAS_VALUE = TRUE;
 				SENSOR_POT_HAS_VALUE = FALSE;
 			}
 			
-			AVR32_USART1.idr = AVR32_USART_IDR_TXRDY_MASK;
+			if(SENSOR_LIGHT_HAS_VALUE){
+				AVR32_USART1.thr = (char)((adc_get_value(&AVR32_ADC, ADC_LIGHT_CHANNEL) >> 2) | 0x01);
+				SENSOR_LIGHT_HAS_VALUE = FALSE;
+				SENSOR_POT_HAS_VALUE = TRUE;
+			}
 		}
 		else if(char_recu == 'x'){
 			aqcuisition = FALSE;
