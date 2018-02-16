@@ -218,21 +218,22 @@ void init_tc(){
 }
 __attribute__((__interrupt__))
 static void toggle_bp0_handler(){
-
+	if( gpio_get_pin_interrupt_flag( GPIO_PUSH_BUTTON_0 ) )
+	{		// PB2 generated the interrupt.
+		LED_Toggle( LED1 );
 		
-		 if( gpio_get_pin_interrupt_flag( AVR32_PIN_PB00 ) )
-		 {		
-			 	gpio_tgl_gpio_pin(LED2_GPIO);
-
-			 // Clear the interrupt flag of the pin PB2 is mapped to.
-			 gpio_clear_pin_interrupt_flag(AVR32_PIN_PB00);
-		 }
-		
+		// Clear the interrupt flag of the pin PB2 is mapped to.
+		gpio_clear_pin_interrupt_flag(GPIO_PUSH_BUTTON_0);
+	}
+	
+	
 }
 void initPBO(){
-	gpio_enable_module_pin(AVR32_PIN_PB00,&toggle_bp0_handler);
-	gpio_enable_pin_interrupt(AVR32_PIN_PB00, GPIO_PIN_CHANGE);
-	INTC_register_interrupt( &toggle_bp0_handler, AVR_PI, AVR32_INTC_INT3);
+	
+	gpio_enable_pin_interrupt(GPIO_PUSH_BUTTON_0 , GPIO_PIN_CHANGE);	// PB2
+	
+	INTC_register_interrupt( &toggle_bp0_handler, AVR32_GPIO_IRQ_0 + (GPIO_PUSH_BUTTON_0/8), AVR32_INTC_INT0);
+
 
 }
 
