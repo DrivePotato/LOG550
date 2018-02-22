@@ -17,15 +17,15 @@
 #include "setup.h"
 
 volatile avr32_tc_t *tc =  (&AVR32_TC);
-volatile int SENSOR_LIGHT_HAS_VALUE;
-volatile int SENSOR_POT_HAS_VALUE;
+volatile int SENSOR_LIGHT_HAS_VALUE = FALSE;
+volatile int SENSOR_POT_HAS_VALUE = TRUE;
 volatile int MODE_COURANT = 0;
 
 //ADC
-volatile int ADC_FRQ = 1000;
+volatile int ADC_FRQ = 10000;
 volatile int SPEED_UP_FRQ = FALSE;
 volatile int aqcuisition = 0;
-volatile U32 char_recu;
+volatile U32 char_recu = ' ';
 
 
 static const tc_waveform_opt_t WAVEFORM_OPT_TC0 =
@@ -75,7 +75,7 @@ static const tc_waveform_opt_t WAVEFORM_OPT_TC1 =
 
 	.burst    = FALSE,                             // Burst signal selection.
 	.clki     = FALSE,                             // Clock inversion.
-	.tcclks   = TC_CLOCK_SOURCE_TC2                // Internal source clock 3, connected to fPBA / 8.
+	.tcclks   = TC_CLOCK_SOURCE_TC4                // Internal source clock 3, connected to fPBA / 8.
 };
 
 static const tc_interrupt_t TC_INTERRUPT_TC0 =
@@ -133,15 +133,41 @@ static void toggle_bp0_handler(){
 /************************************************************************/
 __attribute__((__interrupt__))
 static void tc_irq_1(){
-	// La lecture du registre SR efface le fanion de l'interruption.
 	tc_read_sr(TC, TC_CHANNEL_1);
 
-	tc_write_rc(tc, TC_CHANNEL_1, FRQ1 / ADC_FRQ );
-	tc_configure_interrupts(tc, TC_CHANNEL_1, &TC_INTERRUPT_TC1);
-
-	// Start the timer/counter.
-	tc_start(tc, TC_CHANNEL_1);                    // And start the timer/counter.
+	LED_Toggle(LED5);
 	
+		if(char_recu == 's'){
+			adc_start(&AVR32_ADC);
+
+			aqcuisition = TRUE;
+			
+			// SURVIENT LORS D'UN DÉPASSEMENT DE CONVERSION DE L'ADC
+			if(!adc_check_eoc(&AVR32_ADC, ADC_LIGHT_CHANNEL) || !adc_check_eoc(&AVR32_ADC, ADC_POTENTIOMETER_CHANNEL)){
+				gpio_tgl_gpio_pin(LED2_GPIO);
+			}
+			
+			// SURVIENT LORS D'UN DÉPASSEMENT DE FIN DE TRANSMISSION DE L'USART
+			if (!(AVR32_USART1.csr & (AVR32_USART_CSR_TXRDY_MASK))){
+				gpio_tgl_gpio_pin(LED3_GPIO);
+			}
+			
+			if(SENSOR_POT_HAS_VALUE){
+				AVR32_USART1.thr = (char)((adc_get_value(&AVR32_ADC, ADC_POTENTIOMETER_CHANNEL) >> 2) & ADC_POT_MASK);//Recuperation du canal
+				SENSOR_LIGHT_HAS_VALUE = TRUE;
+				SENSOR_POT_HAS_VALUE = FALSE;
+			}
+			
+			if(SENSOR_LIGHT_HAS_VALUE){
+				AVR32_USART1.thr = (char)((adc_get_value(&AVR32_ADC, ADC_LIGHT_CHANNEL) >> 2) | ADC_LIGHT_MASK);
+				SENSOR_LIGHT_HAS_VALUE = FALSE;
+				SENSOR_POT_HAS_VALUE = TRUE;
+			}
+		}
+		else if(char_recu == 'x'){
+			aqcuisition = FALSE;
+			tc_stop(tc, TC_CHANNEL_1);
+		}
 }
 
 
@@ -241,7 +267,7 @@ void init_adc(){
 	adc_enable(&AVR32_ADC, ADC_POTENTIOMETER_CHANNEL);
 }
 
-void init_tc(){
+void init_tc_leds(){
 
 	
 
@@ -260,8 +286,7 @@ void init_tc(){
   //INTC_init_interrupts();     // Initialise les vecteurs d'interrupt
 
   // Enregistrement de la nouvelle IRQ du TIMER au Interrupt Controller .
-	INTC_register_interrupt(&tc_irq, TC_IRQ0, AVR32_INTC_INT2);
-	INTC_register_interrupt(&tc_irq_1, TC_IRQ1, AVR32_INTC_INT0);
+	INTC_register_interrupt(&tc_irq, TC_IRQ0, AVR32_INTC_INT0);
 
   //Enable_global_interrupt();  // Active les interrupts
 
@@ -271,13 +296,39 @@ void init_tc(){
   tc_configure_interrupts(tc, TC_CHANNEL_0, &TC_INTERRUPT_TC0);
   tc_start(tc, TC_CHANNEL_0);                    // And start the timer/counter.
 
-	tc_init_waveform(tc, &WAVEFORM_OPT_TC1);     // Initialize the timer/counter waveform.
-	tc_write_rc(tc, TC_CHANNEL_1, FRQ1 /ADC_FRQ); // Set RC value.
-	tc_configure_interrupts(tc, TC_CHANNEL_1, &TC_INTERRUPT_TC1);
-	//tc_start(tc, TC_CHANNEL_1);                    // And start the timer/counter.
 
 }
 
+void init_tc_speed(){
+
+	
+
+	  /*! \brief Main function:
+   *  - Configure the CPU to run at 12MHz
+   *  - Register the TC interrupt (GCC only)
+   *  - Configure, enable the CPCS (RC compare match) interrupt, and start a TC channel in waveform mode
+   *  - In an infinite loop, do nothing
+   */
+
+  /* Au reset, le microcontroleur opere sur un crystal interne a 115200Hz. */
+  /* Nous allons le configurer pour utiliser un crystal externe, FOSC0, a 12Mhz. */
+  pcl_switch_to_osc(PCL_OSC0, FOSC0, OSC0_STARTUP);
+
+  //Disable_global_interrupt(); // Desactive les interrupts le temps de la config
+  //INTC_init_interrupts();     // Initialise les vecteurs d'i.nterrupt
+
+  // Enregistrement de la nouvelle IRQ du TIMER au Interrupt Controller .
+	INTC_register_interrupt(&tc_irq_1, TC_IRQ1, AVR32_INTC_INT0);
+
+  //Enable_global_interrupt();  // Active les interrupts
+
+
+	tc_init_waveform(tc, &WAVEFORM_OPT_TC1);     // Initialize the timer/counter waveform.
+	tc_write_rc(tc, TC_CHANNEL_1, FRQ1/1); // Set RC value.
+	tc_configure_interrupts(tc, TC_CHANNEL_1, &TC_INTERRUPT_TC1);
+	tc_start(tc, TC_CHANNEL_1);                    // And start the timer/counter.
+
+}
 
 void initPBO(){
 	//LE handler est appeler a chaque fois qu'un des 2 evenement est arrive
@@ -288,13 +339,14 @@ void initPBO(){
 }
 
 void initialization(){
-	char_recu = ' ';
+
 	
 	Disable_global_interrupt();
 	INTC_init_interrupts();
 	init_adc();
 	init_usart1();
-	init_tc();
+	init_tc_leds();
+	init_tc_speed();
 	initPBO();
 	Enable_global_interrupt();
 }
@@ -303,42 +355,10 @@ int main(void)
 {
 	initialization();
 	
-	SENSOR_LIGHT_HAS_VALUE = FALSE;
-	SENSOR_POT_HAS_VALUE = TRUE;
+	
 	while (TRUE)  
 	{
-		if(char_recu == 's'){
-			adc_start(&AVR32_ADC);
-			tc_start(tc, TC_CHANNEL_1);                    // And start the timer/counter.
-
-			aqcuisition = TRUE;
-			
-			// SURVIENT LORS D'UN DÉPASSEMENT DE CONVERSION DE L'ADC
-			if(!adc_check_eoc(&AVR32_ADC, ADC_LIGHT_CHANNEL) || !adc_check_eoc(&AVR32_ADC, ADC_POTENTIOMETER_CHANNEL)){
-				gpio_tgl_gpio_pin(LED2_GPIO);
-			}
-			
-			// SURVIENT LORS D'UN DÉPASSEMENT DE FIN DE TRANSMISSION DE L'USART
-			if (!(AVR32_USART1.csr & (AVR32_USART_CSR_TXRDY_MASK))){
-				gpio_tgl_gpio_pin(LED3_GPIO);
-			}
-			
-			if(SENSOR_POT_HAS_VALUE){
-				AVR32_USART1.thr = (char)((adc_get_value(&AVR32_ADC, ADC_POTENTIOMETER_CHANNEL) >> 2) & ADC_POT_MASK);//Recuperation du canal
-				SENSOR_LIGHT_HAS_VALUE = TRUE;
-				SENSOR_POT_HAS_VALUE = FALSE;
-			}
-			
-			if(SENSOR_LIGHT_HAS_VALUE){
-				AVR32_USART1.thr = (char)((adc_get_value(&AVR32_ADC, ADC_LIGHT_CHANNEL) >> 2) | ADC_LIGHT_MASK);
-				SENSOR_LIGHT_HAS_VALUE = FALSE;
-				SENSOR_POT_HAS_VALUE = TRUE;
-			}
-		}
-		else if(char_recu == 'x'){
-			aqcuisition = FALSE;
-			tc_stop(tc, TC_CHANNEL_1); 
-		}
+	
 		
 	}
 }
