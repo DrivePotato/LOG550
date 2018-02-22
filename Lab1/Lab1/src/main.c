@@ -17,12 +17,12 @@
 #include "setup.h"
 
 volatile avr32_tc_t *tc =  (&AVR32_TC);
-volatile int SENSOR_LIGHT_HAS_VALUE = FALSE;
-volatile int SENSOR_POT_HAS_VALUE = TRUE;
+volatile int SENSOR_LIGHT_HAS_VALUE = TRUE;
+volatile int SENSOR_POT_HAS_VALUE = FALSE;
 volatile int MODE_COURANT = 0;
 
 //ADC
-volatile int ADC_FRQ = 10000;
+volatile int ADC_FRQ;
 volatile int SPEED_UP_FRQ = FALSE;
 volatile int aqcuisition = 0;
 volatile U32 char_recu = ' ';
@@ -102,6 +102,48 @@ static const tc_interrupt_t TC_INTERRUPT_TC1 =
 };
 
 /************************************************************************/
+/* Interruption deu changement de                                       */
+/************************************************************************/
+__attribute__((__interrupt__))
+static void tc_irq_1(){
+	tc_read_sr(TC, TC_CHANNEL_1);
+
+	LED_Toggle(LED5);
+	
+	if(char_recu == 's'){
+		adc_start(&AVR32_ADC);
+
+		aqcuisition = TRUE;
+		
+		// SURVIENT LORS D'UN DÉPASSEMENT DE CONVERSION DE L'ADC
+		if(!adc_check_eoc(&AVR32_ADC, ADC_LIGHT_CHANNEL) || !adc_check_eoc(&AVR32_ADC, ADC_POTENTIOMETER_CHANNEL)){
+			gpio_tgl_gpio_pin(LED2_GPIO);
+		}
+		
+		// SURVIENT LORS D'UN DÉPASSEMENT DE FIN DE TRANSMISSION DE L'USART
+		if (!(AVR32_USART1.csr & (AVR32_USART_CSR_TXRDY_MASK))){
+			gpio_tgl_gpio_pin(LED3_GPIO);
+		}
+		
+		if(SENSOR_POT_HAS_VALUE){
+			AVR32_USART1.thr = (char)((adc_get_value(&AVR32_ADC, ADC_POTENTIOMETER_CHANNEL) >> 2) & ADC_POT_MASK);//Recuperation du canal
+			SENSOR_LIGHT_HAS_VALUE = TRUE;
+			SENSOR_POT_HAS_VALUE = FALSE;
+		}
+		
+		if(SENSOR_LIGHT_HAS_VALUE){
+			AVR32_USART1.thr = (char)((adc_get_value(&AVR32_ADC, ADC_LIGHT_CHANNEL) >> 2) | ADC_LIGHT_MASK);
+			SENSOR_LIGHT_HAS_VALUE = FALSE;
+			SENSOR_POT_HAS_VALUE = TRUE;
+		}
+	}
+	else if(char_recu == 'x'){
+		aqcuisition = FALSE;
+		tc_stop(tc, TC_CHANNEL_1);
+	}
+}
+
+/************************************************************************/
 /* Interruption du boutton PBO                                          */
 /************************************************************************/
 __attribute__((__interrupt__))
@@ -121,53 +163,17 @@ static void toggle_bp0_handler(){
 			LED_Off(LED5);
 
 		}
-		
+		tc_stop(tc,TC_CHANNEL_1);
+	
+		tc_init_waveform(tc, &WAVEFORM_OPT_TC1);     // Initialize the timer/counter waveform.
+		tc_write_rc(tc, TC_CHANNEL_1, ADC_FRQ); // Set RC value.
+		tc_configure_interrupts(tc, TC_CHANNEL_1, &TC_INTERRUPT_TC1);
+		tc_start(tc, TC_CHANNEL_1);                    // And start the timer/counter.
 		// Clear the interrupt flag of the pin PB2 is mapped to.
 		gpio_clear_pin_interrupt_flag(GPIO_PUSH_BUTTON_0);
 	}
 	
 	
-}
-/************************************************************************/
-/* Interruption deu changement de                                       */
-/************************************************************************/
-__attribute__((__interrupt__))
-static void tc_irq_1(){
-	tc_read_sr(TC, TC_CHANNEL_1);
-
-	LED_Toggle(LED5);
-	
-		if(char_recu == 's'){
-			adc_start(&AVR32_ADC);
-
-			aqcuisition = TRUE;
-			
-			// SURVIENT LORS D'UN DÉPASSEMENT DE CONVERSION DE L'ADC
-			if(!adc_check_eoc(&AVR32_ADC, ADC_LIGHT_CHANNEL) || !adc_check_eoc(&AVR32_ADC, ADC_POTENTIOMETER_CHANNEL)){
-				gpio_tgl_gpio_pin(LED2_GPIO);
-			}
-			
-			// SURVIENT LORS D'UN DÉPASSEMENT DE FIN DE TRANSMISSION DE L'USART
-			if (!(AVR32_USART1.csr & (AVR32_USART_CSR_TXRDY_MASK))){
-				gpio_tgl_gpio_pin(LED3_GPIO);
-			}
-			
-			if(SENSOR_POT_HAS_VALUE){
-				AVR32_USART1.thr = (char)((adc_get_value(&AVR32_ADC, ADC_POTENTIOMETER_CHANNEL) >> 2) & ADC_POT_MASK);//Recuperation du canal
-				SENSOR_LIGHT_HAS_VALUE = TRUE;
-				SENSOR_POT_HAS_VALUE = FALSE;
-			}
-			
-			if(SENSOR_LIGHT_HAS_VALUE){
-				AVR32_USART1.thr = (char)((adc_get_value(&AVR32_ADC, ADC_LIGHT_CHANNEL) >> 2) | ADC_LIGHT_MASK);
-				SENSOR_LIGHT_HAS_VALUE = FALSE;
-				SENSOR_POT_HAS_VALUE = TRUE;
-			}
-		}
-		else if(char_recu == 'x'){
-			aqcuisition = FALSE;
-			tc_stop(tc, TC_CHANNEL_1);
-		}
 }
 
 
@@ -181,11 +187,13 @@ static void tc_irq(void)
 	tc_read_sr(TC, TC_CHANNEL_0);
 
 	// Toggle le LED1
-	gpio_tgl_gpio_pin(LED0_GPIO);
-
+	//gpio_tgl_gpio_pin(LED0_GPIO);
+	LED_Toggle(LED0);
+	
 	//Toogle LED2 si en mode acquisition
 	if(aqcuisition){
-		gpio_tgl_gpio_pin(LED1_GPIO);
+		//gpio_tgl_gpio_pin(LED1_GPIO);
+		LED_Toggle(LED1);
 	}
 }
 
@@ -322,9 +330,9 @@ void init_tc_speed(){
 
   //Enable_global_interrupt();  // Active les interrupts
 
-
+	ADC_FRQ = (ADC_DBL_FRQ /32)/10;
 	tc_init_waveform(tc, &WAVEFORM_OPT_TC1);     // Initialize the timer/counter waveform.
-	tc_write_rc(tc, TC_CHANNEL_1, FRQ1/1); // Set RC value.
+	tc_write_rc(tc, TC_CHANNEL_1, ADC_FRQ); // Set RC value.
 	tc_configure_interrupts(tc, TC_CHANNEL_1, &TC_INTERRUPT_TC1);
 	tc_start(tc, TC_CHANNEL_1);                    // And start the timer/counter.
 
@@ -332,7 +340,9 @@ void init_tc_speed(){
 
 void initPBO(){
 	//LE handler est appeler a chaque fois qu'un des 2 evenement est arrive
-	gpio_enable_pin_interrupt(GPIO_PUSH_BUTTON_0 , GPIO_PIN_CHANGE);	// PB0
+	gpio_enable_pin_interrupt(GPIO_PUSH_BUTTON_0 , GPIO_FALLING_EDGE);	// PB0
+	gpio_enable_pin_interrupt(GPIO_PUSH_BUTTON_0 , GPIO_RISING_EDGE);	// PB0
+
 	INTC_register_interrupt( &toggle_bp0_handler, AVR32_GPIO_IRQ_0 + (GPIO_PUSH_BUTTON_0/8), AVR32_INTC_INT2);
 
 
