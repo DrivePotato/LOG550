@@ -27,6 +27,8 @@ volatile int SPEED_UP_FRQ = FALSE;
 volatile int aqcuisition = 0;
 volatile U32 char_recu = ' ';
 
+//LEDS
+U8 u8LedMap=0x01; // Unsigned int 8bits
 
 static const tc_waveform_opt_t WAVEFORM_OPT_TC0 =
 {
@@ -108,7 +110,7 @@ __attribute__((__interrupt__))
 static void tc_irq_1(){
 	tc_read_sr(TC, TC_CHANNEL_1);
 
-	LED_Toggle(LED5);
+
 	
 	if(char_recu == 's'){
 		adc_start(&AVR32_ADC);
@@ -187,13 +189,13 @@ static void tc_irq(void)
 	tc_read_sr(TC, TC_CHANNEL_0);
 
 	// Toggle le LED1
-	//gpio_tgl_gpio_pin(LED0_GPIO);
-	LED_Toggle(LED0);
 	
 	//Toogle LED2 si en mode acquisition
 	if(aqcuisition){
-		//gpio_tgl_gpio_pin(LED1_GPIO);
+		LED_Toggle(LED0);
 		LED_Toggle(LED1);
+	}else{
+		LED_Toggle(LED0);
 	}
 }
 
