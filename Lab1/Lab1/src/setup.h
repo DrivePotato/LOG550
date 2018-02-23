@@ -34,7 +34,9 @@
 // ADC
 # define ADC_POT_MASK					0b11111110
 # define ADC_LIGHT_MASK					0x01
-	
+# define ADC_BASE_FRQ					8000 //8kHz 1000 ech/sec
+# define ADC_DBL_FRQ					16000 //16kHz 2000 ech/sec
+
 //USART
 # define BAUDS_RATE						57600
 #endif /* SETUP_H_ */
