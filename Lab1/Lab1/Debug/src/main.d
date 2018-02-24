@@ -80,7 +80,7 @@ src/main.d src/main.o src/main.o: ../src/main.c ../src/asf.h \
  ../src/ASF/avr32/drivers/pwm/pwm.h ../src/ASF/avr32/drivers/spi/spi.h \
  ../src/ASF/avr32/drivers/tc/tc.h ../src/ASF/avr32/drivers/usart/usart.h \
  ../src/ASF/avr32/utils/debug/print_funcs.h \
- ../src/ASF/avr32/drivers/pm/pm.h
+ ../src/ASF/avr32/drivers/pm/pm.h ../src/setup.h
 
 ../src/asf.h:
 
@@ -255,3 +255,5 @@ d:\program\ file\atmel\7.0\toolchain\avr32\avr32-gnu-toolchain\bin\../lib/gcc/av
 ../src/ASF/avr32/utils/debug/print_funcs.h:
 
 ../src/ASF/avr32/drivers/pm/pm.h:
+
+../src/setup.h:

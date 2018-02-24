@@ -52,7 +52,7 @@ static const tc_waveform_opt_t WAVEFORM_OPT_TC0 =
 
 	.burst    = FALSE,                             // Burst signal selection.
 	.clki     = FALSE,                             // Clock inversion.
-	.tcclks   = TC_CLOCK_SOURCE_TC4                // Internal source clock 3, connected to fPBA / 8.
+	.tcclks   = TC_CLOCK_SOURCE_TC3                // Internal source clock 3, connected to fPBA / 8.
 };
 
 static const tc_waveform_opt_t WAVEFORM_OPT_TC1 =
@@ -127,8 +127,7 @@ static void tc_irq_1(){
 			SENSOR_LIGHT_HAS_VALUE = TRUE;
 			SENSOR_POT_HAS_VALUE = FALSE;
 		}
-		
-		if(SENSOR_LIGHT_HAS_VALUE){
+		else if(SENSOR_LIGHT_HAS_VALUE){
 			AVR32_USART1.thr = (char)((adc_get_value(&AVR32_ADC, ADC_LIGHT_CHANNEL) >> 2) | ADC_LIGHT_MASK);
 			SENSOR_LIGHT_HAS_VALUE = FALSE;
 			SENSOR_POT_HAS_VALUE = TRUE;
@@ -136,7 +135,6 @@ static void tc_irq_1(){
 	}
 	else if(char_recu == 'x'){
 		aqcuisition = FALSE;
-		
 	}
 }
 
@@ -222,11 +220,7 @@ static void adc_int_handler(){
 	//Retransmettre ce caractere vers le PC, si transmetteur disponible
 	if (AVR32_USART1.csr & (AVR32_USART_CSR_TXRDY_MASK))
 	{
-		if(SENSOR_LIGHT_HAS_VALUE){
-			AVR32_USART1.ier = AVR32_USART_IER_TXRDY_MASK;
-		}
-		
-		if(SENSOR_POT_HAS_VALUE){
+		if(SENSOR_LIGHT_HAS_VALUE | SENSOR_POT_HAS_VALUE){
 			AVR32_USART1.ier = AVR32_USART_IER_TXRDY_MASK;
 		}
 	}
@@ -291,7 +285,7 @@ void init_tc_leds(){
 
   /* Au reset, le microcontroleur opere sur un crystal interne a 115200Hz. */
   /* Nous allons le configurer pour utiliser un crystal externe, FOSC0, a 12Mhz. */
-  pcl_switch_to_osc(PCL_OSC0, FOSC0, OSC0_STARTUP);
+  //pcl_switch_to_osc(PCL_OSC0, FOSC0, OSC0_STARTUP);
 
   //Disable_global_interrupt(); // Desactive les interrupts le temps de la config
   //INTC_init_interrupts();     // Initialise les vecteurs d'interrupt
@@ -331,9 +325,7 @@ void init_tc_speed(){
   // Enregistrement de la nouvelle IRQ du TIMER au Interrupt Controller .
 	INTC_register_interrupt(&tc_irq_1, TC_IRQ1, AVR32_INTC_INT0);
 
-  //Enable_global_interrupt();  // Active les interrupts
-
-	ADC_FRQ = (ADC_DBL_FRQ /32)/10;
+	ADC_FRQ = (ADC_DBL_FRQ /32)/3;
 	tc_init_waveform(tc, &WAVEFORM_OPT_TC1);     // Initialize the timer/counter waveform.
 	tc_write_rc(tc, TC_CHANNEL_1, ADC_FRQ); // Set RC value.
 	tc_configure_interrupts(tc, TC_CHANNEL_1, &TC_INTERRUPT_TC1);
