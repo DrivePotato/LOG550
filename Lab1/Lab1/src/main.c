@@ -141,7 +141,7 @@ static void tc_irq_1(){
 	}
 	else if(char_recu == 'x'){
 		aqcuisition = FALSE;
-		tc_stop(tc, TC_CHANNEL_1);
+		
 	}
 }
 
@@ -188,14 +188,17 @@ static void tc_irq(void)
 	// La lecture du registre SR efface le fanion de l'interruption.
 	tc_read_sr(TC, TC_CHANNEL_0);
 
-	// Toggle le LED1
-	
-	//Toogle LED2 si en mode acquisition
-	if(aqcuisition){
-		LED_Toggle(LED0);
-		LED_Toggle(LED1);
+
+	if(aqcuisition){//Toogle LED0 et LED1 si en mode acquisition
+		//LED_Toggle(LED0);
+		//LED_Toggle(LED1);
+		gpio_tgl_gpio_pin(LED0_GPIO);
+		gpio_tgl_gpio_pin(LED1_GPIO);
+
 	}else{
-		LED_Toggle(LED0);
+		//LED_Toggle(LED0);		
+		gpio_tgl_gpio_pin(LED0_GPIO);
+
 	}
 }
 
