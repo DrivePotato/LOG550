@@ -122,11 +122,6 @@ static void tc_irq_1(){
 			gpio_tgl_gpio_pin(LED2_GPIO);
 		}
 		
-		// SURVIENT LORS D'UN DÉPASSEMENT DE FIN DE TRANSMISSION DE L'USART
-		if (!(AVR32_USART1.csr & (AVR32_USART_CSR_TXRDY_MASK))){
-			gpio_tgl_gpio_pin(LED3_GPIO);
-		}
-		
 		if(SENSOR_POT_HAS_VALUE){
 			AVR32_USART1.thr = (char)((adc_get_value(&AVR32_ADC, ADC_POTENTIOMETER_CHANNEL) >> 2) & ADC_POT_MASK);//Recuperation du canal
 			SENSOR_LIGHT_HAS_VALUE = TRUE;
@@ -234,6 +229,9 @@ static void adc_int_handler(){
 		if(SENSOR_POT_HAS_VALUE){
 			AVR32_USART1.ier = AVR32_USART_IER_TXRDY_MASK;
 		}
+	}
+	else{ // SURVIENT LORS D'UN DÉPASSEMENT DE FIN DE TRANSMISSION DE L'USART
+		gpio_tgl_gpio_pin(LED3_GPIO);
 	}
 }
 
