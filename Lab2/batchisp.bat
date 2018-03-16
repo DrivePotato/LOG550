@@ -1,1 +1,1 @@
-batchisp -device AT32UC3A0512 -hardware usb -operation onfail abort memory FLASH erase F loadbuffer "%~dp0/proto2/Debug/proto2.hex" program verify start reset 0 
+batchisp -device AT32UC3A0512 -hardware usb -operation onfail abort memory FLASH erase F loadbuffer "%~dp0/proto2/Release/proto2.hex" program verify start reset 0 

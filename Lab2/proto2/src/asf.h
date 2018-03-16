@@ -147,7 +147,13 @@
 // From module: TC - Timer/Counter
 #include <tc.h>
 
+// From module: USART - Serial interface - UC3 implementation
+#include <serial.h>
+
 // From module: USART - Universal Synchronous/Asynchronous Receiver/Transmitter
 #include <usart.h>
+
+// From module: USART Debug strings
+#include <print_funcs.h>
 
 #endif // ASF_H
