@@ -76,7 +76,7 @@ int main(void) {
 	xTaskCreate(vUART_Cmd_RX, (signed char*)"Receive", configMINIMAL_STACK_SIZE*2, NULL, tskIDLE_PRIORITY +1, NULL );
 	xTaskCreate(vADC_Cmd, (signed char*)"Conversion", configMINIMAL_STACK_SIZE*2, NULL,tskIDLE_PRIORITY + 2, NULL );
 	xTaskCreate(vUART_SendSample, (signed char*)"Send", configMINIMAL_STACK_SIZE*2, NULL,tskIDLE_PRIORITY + 3, NULL );
-	//xTaskCreate(vLED_Flash, (signed char*)"LED Flash", configMINIMAL_STACK_SIZE*2, NULL, tskIDLE_PRIORITY , NULL );
+	xTaskCreate(vLED_Flash, (signed char*)"LED Flash", configMINIMAL_STACK_SIZE*2, NULL, tskIDLE_PRIORITY , NULL );
 	//xTaskCreate(vAlarmMsgQ, (signed char*)"Alert Message Queue", configMINIMAL_STACK_SIZE*2, NULL, tskIDLE_PRIORITY + 5, NULL );
 
 	/* Start the scheduler. */
@@ -212,7 +212,7 @@ void vUART_Cmd_RX(void *pvParameters) {
 			xSemaphoreGive(START_SEMAPHORE);
 		}
 		
-		//vTaskDelay(200);
+		vTaskDelay(200);
 	}
 }
 
@@ -235,24 +235,31 @@ Effectue le clignotement des LEDs au 200msec.
 moins une fois.                                        */
 /************************************************************************/
 void vLED_Flash(void *pvParameters) {
- 	LED_On(LED3);
+ 		while(1){
 
-	
-	while(1){
 		
-		if(queueIsFull()){
-			LED_On(LED2);//On board LED3
-		}else{
-			LED_Off(LED2);
-		}
-			
-		LED_Toggle(LED0);
-		if(ACQUISITION){
-			LED_Toggle(LED1);
-		}
-		vTaskDelay(10);
 
-	}
+			LED_Toggle(LED0);
+		
+			vTaskDelay(100);
+
+		}
+	
+// 	while(1){
+// 		
+// 		if(queueIsFull()){
+// 			LED_On(LED2);//On board LED3
+// 		}else{
+// 			LED_Off(LED2);
+// 		}
+// 			
+// 		LED_Toggle(LED0);
+// 		if(ACQUISITION){
+// 			LED_Toggle(LED1);
+// 		}
+// 		vTaskDelay(10);
+// 
+// 	}
 	
 	
 }
