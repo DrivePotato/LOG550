@@ -22,7 +22,7 @@
 #include "conf_clock.h"
 #include "adc.h"
 #include "usart.h"
-#include <print_funcs.h>
+//#include <print_funcs.h>
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -33,6 +33,8 @@
 void vUART_Cmd_RX(void *pvParameters);
 void vADC_Cmd(void *pvParameters);
 void vUART_SendSample(void *pvParameters);
+void vLED_Flash(void *pvParameters);
+void vAlarmMsgQ(void *pvParameters);
 	
 // initialization functions
 void initialiseUSART(void);
@@ -41,6 +43,7 @@ void initialiseADC(void);
 char queueIsFull();
 
 // global var
+volatile char ACQUISITION = 0;
 volatile char START = 0;
 volatile char QUEUE_IS_FULL = 0;
 volatile char EMPTYING_QUEUE = 0;
@@ -70,10 +73,12 @@ int main(void) {
  
 	// TODO: Calculer les grosseurs des stacks
 	// TODO: Definir les priorites
-	xTaskCreate(vUART_Cmd_RX, (signed char*)"Receive", configMINIMAL_STACK_SIZE*2, NULL, 1, NULL );
-	xTaskCreate(vADC_Cmd, (signed char*)"Conversion", configMINIMAL_STACK_SIZE*2, NULL, 2, NULL );
-	xTaskCreate(vUART_SendSample, (signed char*)"Send", configMINIMAL_STACK_SIZE*2, NULL, 3, NULL );
-	
+	xTaskCreate(vUART_Cmd_RX, (signed char*)"Receive", configMINIMAL_STACK_SIZE*2, NULL, tskIDLE_PRIORITY +1, NULL );
+	xTaskCreate(vADC_Cmd, (signed char*)"Conversion", configMINIMAL_STACK_SIZE*2, NULL,tskIDLE_PRIORITY + 2, NULL );
+	xTaskCreate(vUART_SendSample, (signed char*)"Send", configMINIMAL_STACK_SIZE*2, NULL,tskIDLE_PRIORITY + 3, NULL );
+	//xTaskCreate(vLED_Flash, (signed char*)"LED Flash", configMINIMAL_STACK_SIZE*2, NULL, tskIDLE_PRIORITY , NULL );
+	//xTaskCreate(vAlarmMsgQ, (signed char*)"Alert Message Queue", configMINIMAL_STACK_SIZE*2, NULL, tskIDLE_PRIORITY + 5, NULL );
+
 	/* Start the scheduler. */
 	vTaskStartScheduler();
 
@@ -145,7 +150,7 @@ void vUART_SendSample(void *pvParameters) {
 /*  place dans le « Message Queue ». Ceci doit être fait à la bonne vitesse.
 /*    
 /*	Si le « Message Queue » est plein, envoie l’information à la tâche
-/*	AlarmMsgQ()./*********************************************************************************/	
+/*	AlarmMsgQ()./*********************************************************************************/	
 void vADC_Cmd(void *pvParameters) {
 	char adc_value_pot;
 	char adc_value_light;
@@ -187,7 +192,6 @@ void vADC_Cmd(void *pvParameters) {
 
 /************************************************************************
 	Vérifie, à chaque 200msec, si des commandes sont reçues par le UART.
-
 	Si une commande est reçue, traiter celle-ci et envoyer l’ordre d’arrêt ou de
 	départ à la tâche ADC_Cmd().
 /************************************************************************/
@@ -212,7 +216,46 @@ void vUART_Cmd_RX(void *pvParameters) {
 	}
 }
 
+/************************************************************************/
+/* Cette tâche est réveillé seulement si un débordement de la « Message Queue »
+survient. Elle commande l’allumage du LED3 en informant la tâche
+LED_Flash().                                                                     */
+/************************************************************************/
+void vAlarmMsgQ(void *pvParameters){
+	
+}
 
+
+/************************************************************************/
+/* Clignotement des LEDs
+Effectue le clignotement des LEDs au 200msec.
+? LED1 clignote toujours dès que votre microcontrôleur est alimenté.
+? LED2 clignote lorsque l’acquisition est en service.
+? LED3 s’allume et reste allumé si le « Message Queue » déborde au
+moins une fois.                                        */
+/************************************************************************/
+void vLED_Flash(void *pvParameters) {
+ 	LED_On(LED3);
+
+	
+	while(1){
+		
+		if(queueIsFull()){
+			LED_On(LED2);//On board LED3
+		}else{
+			LED_Off(LED2);
+		}
+			
+		LED_Toggle(LED0);
+		if(ACQUISITION){
+			LED_Toggle(LED1);
+		}
+		vTaskDelay(10);
+
+	}
+	
+	
+}
 
 /************************************************************************
 	Fonction that initialise ADC
