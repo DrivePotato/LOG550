@@ -49,8 +49,7 @@ volatile char QUEUE_IS_FULL = 0;
 volatile char EMPTYING_QUEUE = 0;
 volatile char LIGHT_LED_3 = 0;
 volatile avr32_adc_t *adc = &AVR32_ADC;
-volatile xQueueHandle handlePotMessageQueue;
-volatile xQueueHandle handlelightMessageQueue;
+volatile xQueueHandle messageQueue;
 
 //TaskHandle
 volatile xTaskHandle alertMessageQueueHandle;
@@ -73,14 +72,14 @@ int main(void) {
 	FULL_QUEUE_SEMAPHORE = xSemaphoreCreateCounting(1,1);
 	ALERT_SEMAPHORE = xSemaphoreCreateCounting(1,1);
 
-	handlePotMessageQueue = xQueueCreate(50, sizeof( char ) );
-	handlelightMessageQueue = xQueueCreate(50, sizeof( char ) );
+	messageQueue = xQueueCreate(1000, sizeof( char ) );
  
 	xTaskCreate(vUART_Cmd_RX, (signed char*)"Receive", configMINIMAL_STACK_SIZE*2, NULL, tskIDLE_PRIORITY +4, NULL );
 	xTaskCreate(vADC_Cmd, (signed char*)"Conversion", configMINIMAL_STACK_SIZE*2, NULL,tskIDLE_PRIORITY + 2, NULL );
 	xTaskCreate(vUART_SendSample, (signed char*)"Send", configMINIMAL_STACK_SIZE*2, NULL,tskIDLE_PRIORITY + 1, NULL );
 	xTaskCreate(vLED_Flash, (signed char*)"LED Flash", configMINIMAL_STACK_SIZE*2, NULL, tskIDLE_PRIORITY +3 , NULL );
 	xTaskCreate(vAlarmMsgQ, (signed char*)"Alert Message Queue", configMINIMAL_STACK_SIZE*2, NULL, tskIDLE_PRIORITY + 10, &alertMessageQueueHandle );
+	vTaskSuspend(alertMessageQueueHandle);
 				
 	/* Start the scheduler. */
 	vTaskStartScheduler();
@@ -96,23 +95,18 @@ int main(void) {
 /*	transmission en direction du PC.                                    */
 /************************************************************************/
 void vUART_SendSample(void *pvParameters) {
-	char potValue = 0;
-	char lightValue = 0;
-	int lightResponse = 0;
-	int potResponse = 0;
+	char value = 0;
+
 
 	
 	while(1){
-		potResponse = xQueueReceive( handlePotMessageQueue, &potValue, ( portTickType ) 10000 );
-		if(potResponse){
-			usart_write_char(&AVR32_USART1, potValue);
+		
+		if( xQueueReceive( messageQueue, &value, ( portTickType ) 10000 )){
+			usart_write_char(&AVR32_USART1, value);
 		}
 		
-		lightResponse = xQueueReceive( handlelightMessageQueue, &lightValue, ( portTickType ) 1000 );
-		if(lightResponse){
-			usart_write_char(&AVR32_USART1, lightValue);
-		}
-		vTaskDelay(2);
+	
+		vTaskDelay(1);
 	}
 }
 
@@ -138,15 +132,16 @@ void vADC_Cmd(void *pvParameters) {
 		if(tempStart){
 			adc_start(adc);
 			adc_value_pot = (char) (adc_get_value(adc, ADC_POTENTIOMETER_CHANNEL) >> 2) & 0b11111110;
-			xQueueSend( handlePotMessageQueue, ( void * ) &adc_value_pot, ( portTickType ) 10 );
+			xQueueSend( messageQueue, ( void * ) &adc_value_pot, ( portTickType ) 10 );
 			
 			adc_start(adc);
 			adc_value_light = (char) (adc_get_value(adc, ADC_LIGHT_CHANNEL) >> 2) | 0x01;
-			xQueueSend( handlelightMessageQueue, ( void * ) &adc_value_light, ( portTickType ) 10 );
+			xQueueSend( messageQueue, ( void * ) &adc_value_light, ( portTickType ) 10 );
 			
 			// Queue is full, raise flag so the led can be light up
-			if(xQueueIsQueueFullFromISR(handlePotMessageQueue) == 0 && ALERT != 1){
+			if(xQueueIsQueueFullFromISR(messageQueue) == 0 ){
 				//Change priority of AlertMsgQ to trigger it now when the queue is full and theres been no ALERT
+				vTaskResume(alertMessageQueueHandle);
 				vTaskPrioritySet(alertMessageQueueHandle, 1);
 			}
 		}
@@ -177,7 +172,7 @@ void vUART_Cmd_RX(void *pvParameters) {
 			xSemaphoreGive(START_SEMAPHORE);
 		}
 		
-		vTaskDelay(200);
+		vTaskDelay(2050);
 	}
 }
 
@@ -225,6 +220,7 @@ void vLED_Flash(void *pvParameters) {
 			if(LIGHT_LED_3){
 				LED_On(LED2);//On board LED3
 				LIGHT_LED_3 = 0;
+				vTaskDelete(alertMessageQueueHandle);
 			}
 		
 			vTaskDelay(400);
