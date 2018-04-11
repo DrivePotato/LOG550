@@ -139,12 +139,16 @@ void vADC_Cmd(void *pvParameters) {
 			xQueueSend( messageQueue, ( void * ) &adc_value_light, ( portTickType ) 10 );
 			
 			// Queue is full, raise flag so the led can be light up
-			if(xQueueIsQueueFullFromISR(messageQueue) == 0 ){
+			if(xQueueIsQueueFullFromISR(messageQueue) == 1 ){
 				//Change priority of AlertMsgQ to trigger it now when the queue is full and theres been no ALERT
 				vTaskResume(alertMessageQueueHandle);
 				vTaskPrioritySet(alertMessageQueueHandle, 1);
 			}
 		}
+		
+		vTaskDelay(2);
+		// Commenter pour deborder la queue
+		// Decommenter pour ne pas faire deborder la queue
 	}
 }
 
