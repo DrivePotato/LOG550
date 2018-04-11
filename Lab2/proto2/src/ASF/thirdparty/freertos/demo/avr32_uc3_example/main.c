@@ -207,12 +207,16 @@ Effectue le clignotement des LEDs au 200msec.
 moins une fois.                                        */
 /************************************************************************/
 void vLED_Flash(void *pvParameters) {
+		char tempStart;
+
  		while(1){
 			//Clignotement  alimentation
 			LED_Toggle(LED0);
-			
+			xSemaphoreTake(START_SEMAPHORE, portMAX_DELAY);
+			tempStart = START;
+			xSemaphoreGive(START_SEMAPHORE);
 			//Clignotement acquisition
-			if(START){
+			if(tempStart){
 			 	LED_Toggle(LED1);
 			}else 
 				LED_Off(LED1);
@@ -223,7 +227,7 @@ void vLED_Flash(void *pvParameters) {
 				LIGHT_LED_3 = 0;
 			}
 		
-			vTaskDelay(200);
+			vTaskDelay(400);
 		}
 	
 }
