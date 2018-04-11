@@ -45,15 +45,12 @@ char queueIsFull();
 // global var
 volatile char ALERT = 0;
 volatile char START = 0;
-volatile char QUEUE_IS_FULL = 0;
-volatile char EMPTYING_QUEUE = 0;
 volatile char LIGHT_LED_3 = 0;
 volatile avr32_adc_t *adc = &AVR32_ADC;
 volatile xQueueHandle messageQueue;
 
 //TaskHandle
 volatile xTaskHandle alertMessageQueueHandle;
-volatile xTaskHandle ledFlashHandle;
 
 
 // semaphore
